@@ -1,12 +1,8 @@
-# olio
+# pote
 > Python helpers, utils or snippets not worthy of its own repo
 
-olio, batiburrillo: a miscellaneous collection of things.
-hodgepodge, gallimaufry, mishmash, hotchpotch, mingle-mangle, ...  
-[Google Translate](https://translate.google.com/details?sl=en&tl=es&text=olio&op=translate)
-
 ``` sh
-pip install olio
+pip install pote
 ```
 
 Stuff I've written that don't really fit anywhere else but may be useful in Python projects. Mostly for my own use, I've included them here in case they are useful to others.

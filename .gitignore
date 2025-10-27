@@ -154,7 +154,6 @@ _docs
 _testbed/**
 .specstory
 .cursorindexingignore
-nbs/olio
 .cursorrules
 _notes.md
 SYSTEM.md
