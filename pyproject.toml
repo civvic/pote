@@ -3,7 +3,7 @@ requires = ["setuptools >= 64", "wheel"]
 build-backend = "setuptools.build_meta"
 
 # [project]
-# name = "olio"
+# name = "pote"
 # version = "0.0.1"
 # description = "Python helpers, utils or code not worthy of its own repo"
 # requires-python = ">=3.10"
