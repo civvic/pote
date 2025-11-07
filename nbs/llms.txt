@@ -16,19 +16,16 @@ Here are some highlights:
 
 ## Docs
 
-- [README](https://civvic.github.io/pote/README.md): Quick start guide and overview
+- [README](https://raw.githubusercontent.com/civvic/pote/refs/heads/main/README.md): Quick start guide and overview
 
 ## API
 
 - [API List](https://civvic.github.io/pote/apilist.txt): A succint list of all functions and methods in claudette.
 
-## Core Documentation
+## Optional
 
 - [Basic helpers](https://civvic.github.io/pote/basic.html.md): Fundamental utilities for data manipulation and type handling
 - [Test helpers](https://civvic.github.io/pote/test.html.md): Testing helpers that extend fastcore's test functions
-
-## Optional
-
 - [Project setuo](https://civvic.github.io/pote/project.html.md): Project setup utilities and Rich console configuration
 - [Callback system](https://civvic.github.io/pote/callback.html.md): Callback system for augmenting objects with side-effects
 - [Config data](https://civvic.github.io/pote/config.html.md): Configuration namespace with context manager support
