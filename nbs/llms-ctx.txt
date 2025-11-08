@@ -95,7 +95,7 @@ implementation and examples.
 - **Documented through tests**: Examples serve as both tests and
   documentation
 - **Minimal dependencies**: Builds on fastcore, ipywidgets, and Rich
-  where appropriate</doc></docs><api><doc title="API List" desc="A succint list of all functions and methods in claudette."># pote Module Documentation
+  where appropriate</doc></docs><api><doc title="API List" desc="A succint list of all functions and methods in nooprompter."># pote Module Documentation
 
 ## pote.basic
 
