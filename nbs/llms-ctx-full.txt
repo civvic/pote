@@ -2139,12 +2139,12 @@ for item in CollBack(items, cbs=[LogProgressCB()]):
 
 ## Common Use Cases
 
-- **File processing**: Track progress through large files
-- **Data pipelines**: Monitor throughput and estimate completion time
-- **Training loops**: Report epoch/batch progress with callbacks
-- **API calls**: Rate limit, retry, log responses without cluttering
+- File processing — Track progress through large files
+- Data pipelines — Monitor throughput and estimate completion time
+- Training loops — Report epoch/batch progress with callbacks
+- API calls — Rate limit, retry, log responses without cluttering
   business logic
-- **Testing**: Inject behavior for debugging without modifying code
+- Testing — Inject behavior for debugging without modifying code
 
 ------------------------------------------------------------------------
 
@@ -2601,32 +2601,31 @@ test_eq(cfg.log_level, 'INFO')
 
 This module enhances Jupyter’s display capabilities with:
 
-- **Rich rendering**: Leverage `rich` library for beautiful object
-  display
-- **Interactive JSON**: Collapsible JSON viewer with configurable depth
-- **Dynamic CSS**: Generate and update CSS stylesheets programmatically
-- **Global styles**: Manage notebook-wide CSS that updates reactively
+- Rich rendering — Leverage `rich` library for beautiful object display
+- Interactive JSON — Collapsible JSON viewer with configurable depth
+- Dynamic CSS — Generate and update CSS stylesheets programmatically
+- Global styles — Manage notebook-wide CSS that updates reactively
 
 ## Key Components
 
-- **[`pretty_repr`](https://civvic.github.io/pote/display.html#pretty_repr)**:
-  Render objects using `rich` formatting (HTML + text)
-- **[`rich_display`](https://civvic.github.io/pote/display.html#rich_display)**:
-  Display objects with rich formatting and updateable handles
-- **[`RenderJSON`](https://civvic.github.io/pote/display.html#renderjson)**:
-  Interactive collapsible JSON viewer
-- **[`cssmap`](https://civvic.github.io/pote/display.html#cssmap)**:
+- [`pretty_repr`](https://civvic.github.io/pote/display.html#pretty_repr)
+  — Render objects using `rich` formatting (HTML + text)
+- [`rich_display`](https://civvic.github.io/pote/display.html#rich_display)
+  — Display objects with rich formatting and updateable handles
+- [`RenderJSON`](https://civvic.github.io/pote/display.html#renderjson)
+  — Interactive collapsible JSON viewer
+- [`cssmap`](https://civvic.github.io/pote/display.html#cssmap) —
   Convert Python dicts to CSS strings (including nested at-rules)
-- **[`GlobalCSS`](https://civvic.github.io/pote/display.html#globalcss)**:
+- [`GlobalCSS`](https://civvic.github.io/pote/display.html#globalcss) —
   Manage global CSS with reactive updates
 
 ## When to Use
 
-- **Pretty printing**: Display complex data structures with syntax
+- Pretty printing — Display complex data structures with syntax
   highlighting
-- **Data exploration**: Inspect nested JSON/dicts with collapsible views
-- **Notebook styling**: Generate CSS from Python for consistent theming
-- **Dynamic UIs**: Update styles reactively based on state changes
+- Data exploration — Inspect nested JSON/dicts with collapsible views
+- Notebook styling — Generate CSS from Python for consistent theming
+- Dynamic UIs — Update styles reactively based on state changes
 
 
 # Rich display
@@ -3395,7 +3394,7 @@ name = input("Enter your name:")
 print(f"It's very important to know your name, {name}!")
 ```
 
-    It's very important to know your name, asdfg!
+    It's very important to know your name, qwerty!
 
 If you’re running this on VSCode or forks, you’ll notice that `input`
 works as expected, but its UX is unwieldy with a nearly invisible popout
@@ -3425,7 +3424,7 @@ print(f"It's very important to know your name, {name}!")
     KeyboardInterrupt: 
     [0;31m---------------------------------------------------------------------------[0m
     [0;31mKeyboardInterrupt[0m                         Traceback (most recent call last)
-    Cell [0;32mIn[34], line 12[0m
+    Cell [0;32mIn[37], line 12[0m
     [1;32m     10[0m [38;5;28;01mwhile[39;00m [38;5;28;01mTrue[39;00m:
     [1;32m     11[0m     [38;5;28;01mif[39;00m text[38;5;241m.[39mvalue: [38;5;28;01mbreak[39;00m
     [0;32m---> 12[0m     [43mtime[49m[38;5;241;43m.[39;49m[43msleep[49m[43m([49m[38;5;241;43m0.5[39;49m[43m)[49m
@@ -3458,7 +3457,7 @@ print(f"It's very important to know your name, {name}!")
 
     Text(value='', continuous_update=False, placeholder='Enter your name; enter to submit')
 
-    It's very important to know your name, asdfg!
+    It's very important to know your name, qwerty!
 
 You can try lots of convoluted solutions, but by design is very
 difficult to block the kernel using widgets. Crafting modal UIs with
@@ -3532,7 +3531,7 @@ print('done')
 
     Button(description='Click Me', style=ButtonStyle())
 
-    ..................done
+    .......................done
 
 ## `input` with widgets
 
@@ -3553,9 +3552,9 @@ name = get_user_input('You', placeholder='Input your name; enter to submit', tim
 Markdown(f"Your intervention has saved the Universe and beyond, **{name}**!")
 ```
 
-**You** qwert
+**You**
 
-Your intervention has saved the Universe and beyond, **qwert**!
+Your intervention has saved the Universe and beyond, \*\*\*\*!
 
 ------------------------------------------------------------------------
 </doc></optional></project>
