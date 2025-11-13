@@ -26,8 +26,9 @@ Here are some highlights:
 
 - [Basic helpers](https://civvic.github.io/pote/basic.html.md): Fundamental utilities for data manipulation and type handling
 - [Test helpers](https://civvic.github.io/pote/test.html.md): Testing helpers that extend fastcore's test functions
-- [Project setuo](https://civvic.github.io/pote/project.html.md): Project setup utilities and Rich console configuration
+- [Project setup](https://civvic.github.io/pote/project.html.md): Project setup utilities and Rich console configuration
 - [Callback system](https://civvic.github.io/pote/callback.html.md): Callback system for augmenting objects with side-effects
 - [Config data](https://civvic.github.io/pote/config.html.md): Configuration namespace with context manager support
 - [Display helpers](https://civvic.github.io/pote/display.html.md): Jupyter display enhancements and Rich integration
-- [Widgets tools](https://civvic.github.io/pote/widgets.html.md): ipywidgets utilities for async and blocking operations
+- [Widgets tools](https://civvic.github.io/pote/widgets.html.md): ipywidgets utilities for async and blocking operations (requires pote[widgets])
+- [Logger helpers](https://civvic.github.io/pote/logger_loguru.html.md): Loguru configuration helpers for structured logging (requires pote[logging])

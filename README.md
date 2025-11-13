@@ -44,7 +44,11 @@ well-tested, and designed for immediate use.
 - **[display](display.html)** - Jupyter display enhancements: Rich
   integration, collapsible JSON rendering, CSS generation
 - **[widgets](widgets.html)** - ipywidgets utilities: widget cleanup,
-  async support, blocking input helpers
+  async support, blocking input helpers (requires
+  `pip install pote[widgets]`)
+- **[logger_loguru](logger_loguru.html)** - Loguru configuration helpers
+  for structured logging with hierarchical indentation (requires
+  `pip install pote[logging]`)
 
 ## Quick Start
 
@@ -85,5 +89,28 @@ implementation and examples.
 - **Battle-tested**: Extracted from production projects
 - **Documented through tests**: Examples serve as both tests and
   documentation
-- **Minimal dependencies**: Builds on fastcore, ipywidgets, and Rich
-  where appropriate
+- **Minimal dependencies**: Core uses only fastcore and Rich. Optional
+  features (widgets, logging) available via extras
+
+### Optional Dependencies
+
+pote has a minimal core (only `fastcore` and `rich`). Additional
+features require optional dependencies:
+
+**For widget utilities:**
+
+``` sh
+pip install pote[widgets]
+```
+
+**For logging helpers:**
+
+``` sh
+pip install pote[logging]
+```
+
+**Install everything:**
+
+``` sh
+pip install pote[all]
+```
