@@ -9,15 +9,6 @@ from __future__ import annotations
 __all__ = ['log_config', 'LogFormatter', 'LogLevelFilter', 'tree_logger', 'setup_logger', 'config_logger']
 
 # %% ../nbs/02_logger_loguru.ipynb
-try:
-    import loguru
-except ImportError as e:
-    raise ImportError(
-        "Logger utilities require optional dependency. "
-        "Install with: pip install pote[logging]"
-    ) from e
-
-# %% ../nbs/02_logger_loguru.ipynb
 import functools
 import sys
 from contextlib import contextmanager

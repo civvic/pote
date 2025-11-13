@@ -9,23 +9,15 @@ from __future__ import annotations
 __all__ = ['close_widget', 'cleanupwidgets', 'Clickable', 'wait_for_change', 'yield_for_change', 'get_user_input']
 
 # %% ../nbs/20_widgets.ipynb
-try:
-    import ipywidgets as W
-    from jupyter_ui_poll import ui_events
-except ImportError as e:
-    raise ImportError(
-        "Widget utilities require optional dependencies. "
-        "Install with: pip install pote[widgets]"
-    ) from e
-
-# %% ../nbs/20_widgets.ipynb
 import asyncio
 import time
 from functools import wraps
 
+import ipywidgets as W
 import traitlets as T
 from IPython.display import display
 from IPython.display import Markdown
+from jupyter_ui_poll import ui_events
 
 
 # %% ../nbs/20_widgets.ipynb
