@@ -97,7 +97,7 @@ implementation and examples.
 - **Copy-friendly**: See something useful? Copy it with my blessing
 - **Battle-tested**: Extracted from production projects
 - **Documented through tests**: Examples serve as both tests and
-  documentation</doc></docs><api><doc title="API List" desc="A succint list of all functions and methods in nooprompter."># pote Module Documentation
+  documentation</doc></docs><api><doc title="API List" desc="A succint list of all functions and methods in pote."># pote Module Documentation
 
 ## pote.basic
 
@@ -259,6 +259,58 @@ implementation and examples.
     - `def update(self, name, css)`
     - `def display(self)`
     - `def __init__(self, css)`
+
+## pote.logger_loguru
+
+> Loguru configuration helpers for structured logging with indentation
+
+- `class LogFormatter`
+    Formats log records with indentation for tree-structured output
+
+    - `def __init__(self)`
+    - `def format(self, record)`
+        Format record with current indentation level
+
+
+- `class LogLevelFilter`
+    Filter log records by minimum level with context manager for temporary override
+
+    - `def __init__(self, level)`
+    - `def __call__(self, record)`
+        Return True if record meets minimum level threshold
+
+    - `@contextmanager def temp(self, tmp_level)`
+        Temporarily override filter level within context
+
+
+- `class tree_logger`
+    Logger wrapper managing hierarchical indentation for tree-structured output
+
+    - `def __init__(self, logger, fmt)`
+    - `@property def level`
+        Current indentation level (0=root)
+
+    - `@property def indent`
+        Current indentation string using box drawing chars
+
+    - `def __getattr__(self, name)`
+        Proxy logger methods with indent bound; handle push/pop
+
+    - `def reset(self)`
+        Reset indentation to root level
+
+    - `@contextmanager def inc_indent(self)`
+        Context manager temporarily increasing indent by one level
+
+    - `def bracket_logging(self, header_f, *attr_n)`
+        Decorator for async methods: log entry with indent, auto-pop on exit
+
+
+- `def setup_logger(logger, name)`
+    Apply standard config (format, level filter, backtrace) to logger
+
+- `def config_logger(logger)`
+    Configure logger with colors and return (logger, tree_logger) tuple
 
 ## pote.project
 

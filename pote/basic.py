@@ -6,12 +6,13 @@
 from __future__ import annotations
 
 # %% auto 0
-__all__ = ['empty', 'is_empty', 'AD', 'is_listy', 'is_listy_type', 'flatten', 'shorten', 'shortens', 'Runner', 'setattrs',
-           'val_at', 'val_atpath', 'has_key', 'has_path', 'vals_atpath', 'vals_at', 'deep_in', 'pops_', 'pops_values_',
-           'gets', 'update_', 'bundle_path', 'Kounter', 'simple_id', 'id_gen', 'WithCounterMeta']
+__all__ = ['empty', 'val_at', 'is_empty', 'AD', 'is_listy', 'is_listy_type', 'flatten', 'Fields', 'shorten', 'shortens', 'Runner',
+           'setattrs', 'at_', 'val_atpath', 'has_key', 'has_path', 'vals_atpath', 'vals_at', 'deep_in', 'pops_',
+           'pops_values_', 'gets', 'update_', 'bundle_path', 'Kounter', 'simple_id', 'id_gen', 'WithCounterMeta']
 
 # %% ../nbs/00_basic.ipynb
 import importlib
+import inspect
 import operator
 import os
 import pprint
@@ -31,7 +32,6 @@ from typing import Mapping
 from typing import MutableMapping
 from typing import Self
 from typing import Sequence
-from typing import Type
 from typing import TypeAlias
 from typing import TypeVar
 
@@ -77,6 +77,23 @@ def flatten(o):
         except TypeError: yield item
 
 # %% ../nbs/00_basic.ipynb
+def _flds(o, *args): return tuple(_ for _ in inspect.signature(o if isinstance(o, type) else type(o)).parameters.keys())+args
+
+# %% ../nbs/00_basic.ipynb
+@FC.delegates(FC.store_attr, but=['names', 'self'])  # type: ignore
+def Fields(*args, **kwargs):
+    "Set annotated fields of `self` extracted from caller's locals; `*args` -> optional (None), `**kwargs` -> defaults"
+    caller_locals =  sys._getframe(1).f_locals
+    o = caller_locals['self']
+    fields = {name: caller_locals[name] for name in _flds(o) if name in caller_locals}
+    fields = {**fields, **{k: None for k in args}, **kwargs}
+    # hack to make `store_attr` work with empty dict/list
+    proxy = FC.AttrDict(_=None)  
+    FC.store_attr(names=None, self=proxy, store_args=False, **fields)
+    for k in fields: setattr(o, k, proxy[k])
+    if not hasattr((cls := type(o)), '__fields__'): setattr(cls, '__fields__', tuple(fields.keys()))
+
+# %% ../nbs/00_basic.ipynb
 def shorten(x:Any, mode:Literal['l', 'r', 'c']='l', limit=40, trunc='…', empty='') -> str:
     if len(s := str(x)) > limit:
         l, m, r = (
@@ -115,29 +132,60 @@ def setattrs(dest, src, flds=''):
     for fld in flds: s(dest, fld, g(src, fld))
 
 # %% ../nbs/00_basic.ipynb
-def val_at(o, attr: str, default: Any=empty, sep='.'):
-    "Traverse nested `o` looking for attributes/items specified in dot-separated `attr`."
-    if not isinstance(attr, str): raise TypeError(f'{attr=!r} is not a string')
+_empty = Parameter.empty
+
+# %% ../nbs/00_basic.ipynb
+# def val_at(o, attr: str, default: Any=empty, sep='.'):
+#     "Traverse nested `o` looking for attributes/items specified in dot-separated `attr`."
+#     if not isinstance(attr, str): raise TypeError(f'{attr=!r} is not a string')
+#     try:
+#         for a in attr.split(sep):
+#             if a[0]=='-' or a[0].isdigit(): a = int(a)
+#             try: o = o[a]
+#             except Exception:
+#                 if isinstance(a, int):
+#                     a = str(a)
+#                     try: o = o[a]
+#                     except Exception: pass
+#                 o = getattr(o, a)
+#     except Exception as e:
+#         if default is not empty: return default
+#         raise e
+#     return o
+
+def at_(
+    o, # Object to traverse (dict, list, object, or nested combination)
+    sym: str, # Path using dots and/or brackets (e.g., 'a.b[0].c' or 'a[b][c]')",
+    default: Any=_empty, # Value to return if path not found (raises exception if not provided)
+    sep='.' # Separator for path segments
+) -> Any: # Value at the specified path
+    "Traverse nested `o` using path `sym` with dot notation and/or bracket indexing"
+    sym = re.sub(r'\[([^\]]+)\]', r'.\1', sym)
     try:
-        for a in attr.split(sep):
+        for a in filter(None, sym.split(sep)):
+            if a.lstrip('-').isdigit(): a = int(a)
             try: o = o[a]
-            except (TypeError, KeyError):
-                try: o = o[int(a)]
-                except (IndexError, TypeError, KeyError, ValueError): o = getattr(o, a)
-    except AttributeError as e:
-        return default if default is not empty else FC.stop(e)  # type: ignore
+            except Exception:
+                if isinstance(a, int):
+                    try: o = o[str(a)]; continue
+                    except Exception: pass
+                o = getattr(o, a)  # type: ignore
+    except Exception:
+        if default is not _empty: return default
+        raise
     return o
 
-def val_atpath(o, *path: Any,  default: Any=empty):
+val_at = at_
+
+def val_atpath(o, *path: str|int,  default: Any=empty):
     "Traverse nested `o` looking for attributes/items specified in `path`."
     try:
         for a in path:
             try: o = o[a]
-            except (IndexError, TypeError, KeyError):
-                try: o = o[int(a)]
-                except (IndexError, TypeError, KeyError, ValueError): o = getattr(o, str(a))
-    except (AttributeError, TypeError) as e:
-        return default if default is not empty else FC.stop(e)  # type: ignore
+            except Exception: o = getattr(o, a)  # type: ignore
+    except Exception:
+        if default is not empty: return default
+        raise
     return o
 
 _NF = object()
@@ -146,9 +194,9 @@ def has_key(o, attr: str, sep='.') -> bool:
     "Return `True` if nested dot-separated `attr` exists."
     return val_at(o, attr, default=_NF, sep=sep) is not _NF
 
-def has_path(o, *path: Any) -> bool:
+def has_path(o, *path: str|int) -> bool:
     "Return `True` if nested `path` exists."
-    return val_atpath(o, path, default=_NF) is not _NF
+    return val_atpath(o, *path, default=_NF) is not _NF
 
 # %% ../nbs/00_basic.ipynb
 def _vals_atpath(o, *path: Any, filter_empty=False) -> empty | tuple[empty | object, ...] | object:
