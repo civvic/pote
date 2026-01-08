@@ -6,12 +6,13 @@
 from __future__ import annotations
 
 # %% auto 0
-__all__ = ['empty', 'is_empty', 'AD', 'is_listy', 'is_listy_type', 'flatten', 'shorten', 'shortens', 'Runner', 'setattrs',
+__all__ = ['empty', 'val_at', 'is_empty', 'AD', 'is_listy', 'is_listy_type', 'flatten', 'Fields', 'shorten', 'shortens', 'Runner',
            'val_at', 'val_atpath', 'has_key', 'has_path', 'vals_atpath', 'vals_at', 'deep_in', 'pops_', 'pops_values_',
            'gets', 'update_', 'bundle_path', 'Kounter', 'simple_id', 'id_gen', 'WithCounterMeta']
 
 # %% ../nbs/00_basic.ipynb
 import importlib
+import inspect
 import operator
 import os
 import pprint
@@ -75,6 +76,23 @@ def flatten(o):
         if not is_listy(item): yield item; continue
         try: yield from flatten(item)
         except TypeError: yield item
+
+# %% ../nbs/00_basic.ipynb
+def _flds(o, *args): return tuple(_ for _ in inspect.signature(o if isinstance(o, type) else type(o)).parameters.keys())+args
+
+# %% ../nbs/00_basic.ipynb
+@FC.delegates(FC.store_attr, but=['names', 'self'])  # type: ignore
+def Fields(*args, **kwargs):
+    "Set annotated fields of `self` extracted from caller's locals; `*args` -> optional (None), `**kwargs` -> defaults"
+    caller_locals =  sys._getframe(1).f_locals
+    o = caller_locals['self']
+    fields = {name: caller_locals[name] for name in _flds(o) if name in caller_locals}
+    fields = {**fields, **{k: None for k in args}, **kwargs}
+    # hack to make `store_attr` work with empty dict/list
+    proxy = FC.AttrDict(_=None)  
+    FC.store_attr(names=None, self=proxy, store_args=False, **fields)
+    for k in fields: setattr(o, k, proxy[k])
+    if not hasattr((cls := type(o)), '__fields__'): setattr(cls, '__fields__', tuple(fields.keys()))
 
 # %% ../nbs/00_basic.ipynb
 def shorten(x:Any, mode:Literal['l', 'r', 'c']='l', limit=40, trunc='…', empty='') -> str:
