@@ -7,8 +7,8 @@ from __future__ import annotations
 
 # %% auto 0
 __all__ = ['empty', 'val_at', 'is_empty', 'AD', 'is_listy', 'is_listy_type', 'flatten', 'Fields', 'shorten', 'shortens', 'Runner',
-           'val_at', 'val_atpath', 'has_key', 'has_path', 'vals_atpath', 'vals_at', 'deep_in', 'pops_', 'pops_values_',
-           'gets', 'update_', 'bundle_path', 'Kounter', 'simple_id', 'id_gen', 'WithCounterMeta']
+           'setattrs', 'at_', 'val_atpath', 'has_key', 'has_path', 'vals_atpath', 'vals_at', 'deep_in', 'pops_',
+           'pops_values_', 'gets', 'update_', 'bundle_path', 'Kounter', 'simple_id', 'id_gen', 'WithCounterMeta']
 
 # %% ../nbs/00_basic.ipynb
 import importlib
@@ -32,7 +32,6 @@ from typing import Mapping
 from typing import MutableMapping
 from typing import Self
 from typing import Sequence
-from typing import Type
 from typing import TypeAlias
 from typing import TypeVar
 
@@ -133,29 +132,60 @@ def setattrs(dest, src, flds=''):
     for fld in flds: s(dest, fld, g(src, fld))
 
 # %% ../nbs/00_basic.ipynb
-def val_at(o, attr: str, default: Any=empty, sep='.'):
-    "Traverse nested `o` looking for attributes/items specified in dot-separated `attr`."
-    if not isinstance(attr, str): raise TypeError(f'{attr=!r} is not a string')
+_empty = Parameter.empty
+
+# %% ../nbs/00_basic.ipynb
+# def val_at(o, attr: str, default: Any=empty, sep='.'):
+#     "Traverse nested `o` looking for attributes/items specified in dot-separated `attr`."
+#     if not isinstance(attr, str): raise TypeError(f'{attr=!r} is not a string')
+#     try:
+#         for a in attr.split(sep):
+#             if a[0]=='-' or a[0].isdigit(): a = int(a)
+#             try: o = o[a]
+#             except Exception:
+#                 if isinstance(a, int):
+#                     a = str(a)
+#                     try: o = o[a]
+#                     except Exception: pass
+#                 o = getattr(o, a)
+#     except Exception as e:
+#         if default is not empty: return default
+#         raise e
+#     return o
+
+def at_(
+    o, # Object to traverse (dict, list, object, or nested combination)
+    sym: str, # Path using dots and/or brackets (e.g., 'a.b[0].c' or 'a[b][c]')",
+    default: Any=_empty, # Value to return if path not found (raises exception if not provided)
+    sep='.' # Separator for path segments
+) -> Any: # Value at the specified path
+    "Traverse nested `o` using path `sym` with dot notation and/or bracket indexing"
+    sym = re.sub(r'\[([^\]]+)\]', r'.\1', sym)
     try:
-        for a in attr.split(sep):
+        for a in filter(None, sym.split(sep)):
+            if a.lstrip('-').isdigit(): a = int(a)
             try: o = o[a]
-            except (TypeError, KeyError):
-                try: o = o[int(a)]
-                except (IndexError, TypeError, KeyError, ValueError): o = getattr(o, a)
-    except AttributeError as e:
-        return default if default is not empty else FC.stop(e)  # type: ignore
+            except Exception:
+                if isinstance(a, int):
+                    try: o = o[str(a)]; continue
+                    except Exception: pass
+                o = getattr(o, a)  # type: ignore
+    except Exception:
+        if default is not _empty: return default
+        raise
     return o
 
-def val_atpath(o, *path: Any,  default: Any=empty):
+val_at = at_
+
+def val_atpath(o, *path: str|int,  default: Any=empty):
     "Traverse nested `o` looking for attributes/items specified in `path`."
     try:
         for a in path:
             try: o = o[a]
-            except (IndexError, TypeError, KeyError):
-                try: o = o[int(a)]
-                except (IndexError, TypeError, KeyError, ValueError): o = getattr(o, str(a))
-    except (AttributeError, TypeError) as e:
-        return default if default is not empty else FC.stop(e)  # type: ignore
+            except Exception: o = getattr(o, a)  # type: ignore
+    except Exception:
+        if default is not empty: return default
+        raise
     return o
 
 _NF = object()
@@ -164,9 +194,9 @@ def has_key(o, attr: str, sep='.') -> bool:
     "Return `True` if nested dot-separated `attr` exists."
     return val_at(o, attr, default=_NF, sep=sep) is not _NF
 
-def has_path(o, *path: Any) -> bool:
+def has_path(o, *path: str|int) -> bool:
     "Return `True` if nested `path` exists."
-    return val_atpath(o, path, default=_NF) is not _NF
+    return val_atpath(o, *path, default=_NF) is not _NF
 
 # %% ../nbs/00_basic.ipynb
 def _vals_atpath(o, *path: Any, filter_empty=False) -> empty | tuple[empty | object, ...] | object:
