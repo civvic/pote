@@ -20,7 +20,7 @@ Here are some highlights:
 
 ## API
 
-- [API List](https://civvic.github.io/pote/apilist.txt): A succint list of all functions and methods in nooprompter.
+- [API List](https://civvic.github.io/pote/apilist.txt): A succint list of all functions and methods in pote.
 
 ## Optional
 
