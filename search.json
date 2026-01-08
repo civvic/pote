@@ -1,0 +1,452 @@
+[
+  {
+    "objectID": "display.html",
+    "href": "display.html",
+    "title": "Display",
+    "section": "",
+    "text": "This module enhances Jupyter’s display capabilities with:",
+    "crumbs": [
+      "Display"
+    ]
+  },
+  {
+    "objectID": "display.html#key-components",
+    "href": "display.html#key-components",
+    "title": "Display",
+    "section": "Key Components",
+    "text": "Key Components\n\npretty_repr — Render objects using rich formatting (HTML + text)\nrich_display — Display objects with rich formatting and updateable handles\nRenderJSON — Interactive collapsible JSON viewer\ncssmap — Convert Python dicts to CSS strings (including nested at-rules)\nGlobalCSS — Manage global CSS with reactive updates",
+    "crumbs": [
+      "Display"
+    ]
+  },
+  {
+    "objectID": "display.html#when-to-use",
+    "href": "display.html#when-to-use",
+    "title": "Display",
+    "section": "When to Use",
+    "text": "When to Use\n\nPretty printing — Display complex data structures with syntax highlighting\nData exploration — Inspect nested JSON/dicts with collapsible views\nNotebook styling — Generate CSS from Python for consistent theming\nDynamic UIs — Update styles reactively based on state changes",
+    "crumbs": [
+      "Display"
+    ]
+  },
+  {
+    "objectID": "display.html#cssmap",
+    "href": "display.html#cssmap",
+    "title": "Display",
+    "section": "cssmap",
+    "text": "cssmap\nConvert Python dictionaries to CSS strings. Supports: - Nested selectors - At-rules (@media, @scope, @keyframes, etc.) - Proper indentation and formatting\nWhy use this? - Type-safe CSS generation - Easier to compose and reuse styles - Programmatic style generation (loops, conditionals)\n\nsource\n\ncssmap\n\ndef cssmap(\n    stylesheet, lvl:int=0\n)-&gt;str:\n\n\nsource\n\n\ncssmap\n\ndef cssmap(\n    stylesheet, lvl:int=0\n)-&gt;str:\n\n\nsource\n\n\ncssmap\n\ndef cssmap(\n    stylesheet, lvl:int=0\n)-&gt;str:\n\n\nexpected = '''@scope (div.tableFixHead) {\n  :scope {\n    overflow-y: auto;\n    max-width: max-content\n  }\n\n  thead th {\n    position: sticky;\n    top: 0px;\n    background-color: gray\n  }\n}\n\nbody {\n  font-family: Arial, sans-serif;\n  margin: 0;\n  padding: 20px\n}'''\n\n\nstyle = {\n    '@scope (div.tableFixHead)': {\n        ':scope': {\n            'overflow-y': 'auto',\n            'max-width': 'max-content',\n        },\n        'thead th': {\n            'position': 'sticky',\n            'top': '0px',\n            'background-color': 'gray',\n        }\n    },\n    'body': {\n        'font-family': 'Arial, sans-serif',\n        'margin': '0',\n        'padding': '20px'\n    }\n}\n\n\ncss = cssmap(style)\ntest_eq(css, expected)\ndisplay(Markdown(f\"```css\\n{css}\\n```\"))\n\n                                                                                                                   \n @scope (div.tableFixHead) {                                                                                       \n   :scope {                                                                                                        \n     overflow-y: auto;                                                                                             \n     max-width: max-content                                                                                        \n   }                                                                                                               \n                                                                                                                   \n   thead th {                                                                                                      \n     position: sticky;                                                                                             \n     top: 0px;                                                                                                     \n     background-color: gray                                                                                        \n   }                                                                                                               \n }                                                                                                                 \n                                                                                                                   \n body {                                                                                                            \n   font-family: Arial, sans-serif;                                                                                 \n   margin: 0;                                                                                                      \n   padding: 20px                                                                                                   \n }",
+    "crumbs": [
+      "Display"
+    ]
+  },
+  {
+    "objectID": "display.html#globalcss",
+    "href": "display.html#globalcss",
+    "title": "Display",
+    "section": "GlobalCSS",
+    "text": "GlobalCSS\nManage notebook-wide CSS with reactive updates. Create a single GlobalCSS instance, display it once, then add/update styles dynamically throughout your notebook.\nPattern:\n# Cell 1: Initialize and display\nGCSS = GlobalCSS()\ndisplay(GCSS)\n\n# Cell 2: Add styles dynamically\nGCSS.add('my-component', '.my-component { color: blue; }')\n\n# Cell 3: Update existing styles\nGCSS.update('my-component', '.my-component { color: red; }')\nBenefits: - Single source of truth for notebook styles - No duplicate &lt;style&gt; tags - Reactive updates without re-executing cells - Named styles for easy management\n\nsource\n\nGlobalCSS\n\ndef GlobalCSS(\n    css:dict[str, str] \\| None=None\n):\n\nInitialize self. See help(type(self)) for accurate signature.\n\nGCSS = GlobalCSS()\ndisplay(GCSS)\n\n\n\n\n\n&lt;div class=\"__test__gcss__\"&gt;Hello&lt;/div&gt;\n\nHello\n\n\n\nGCSS.add('test', '.__test__gcss__ { color: red; }')\n\n\nGCSS.update('test', '.__test__gcss__ { color: green; }')\n\n\ntest_stdout(lambda: display(GCSS), 'GlobalCSSs should be displayed only once, skipping.')",
+    "crumbs": [
+      "Display"
+    ]
+  },
+  {
+    "objectID": "config.html",
+    "href": "config.html",
+    "title": "Config",
+    "section": "",
+    "text": "source",
+    "crumbs": [
+      "Config"
+    ]
+  },
+  {
+    "objectID": "config.html#usage-examples",
+    "href": "config.html#usage-examples",
+    "title": "Config",
+    "section": "Usage Examples",
+    "text": "Usage Examples\n\nWith dataclass\n\n@dataclasses.dataclass\nclass _Dc(Config):\n    a: int = 1\n    b: str = '2'\n    c: dict = dataclasses.field(default_factory=lambda: {'c1': 1})\n\nt = _Dc()\nprint(t)\n\ntest_eq(t.a, 1)\nwith t(a=3): test_eq(t.a, 3)\ntest_eq(t.a, 1)\n\nt.update(a=3, d=10)\ntest_eq(t.a, 3)\ntest_is(hasattr(t, 'd'), False)\n\nt\n\n_Dc(a=1, b='2', c={'c1': 1})\n\n\n_Dc(a=3, b='2', c={'c1': 1})\n\n\n\n\nWith inheritance\nConfig supports inheritance for composing hierarchical configurations:\n\nclass _A(Config):\n    a: int = 1\n    b: str = '2'\n\nclass _B(_A):\n    a: int = 7\n    c: dict\n    def __init__(self, *args, **kwargs): self.c = {'c1': 1}\n\nb = _B()\nprint(b)\n\ntest_eq(b.a, 7)\nwith b(a=3): test_eq(b.a, 3)\ntest_eq(b.a, 7)\n\nb.update(a=3, d=10)\ntest_eq(b.a, 3)\ntest_is(hasattr(b, 'd'), False)\n\nb\n\n{'a': 7, 'c': {'c1': 1}, 'b': '2'}\n\n\n{'a': 3, 'c': {'c1': 1}, 'b': '2'}\n\n\n\n\n\n\nContext manager patterns\n\n# Temporary overrides for testing\nclass AppConfig(Config):\n    debug: bool = False\n    log_level: str = 'INFO'\n    timeout: int = 30\n\ncfg = AppConfig()\n\n# Normal operation\ntest_eq(cfg.debug, False)\n\n# Test with debug enabled\nwith cfg(debug=True, log_level='DEBUG'):\n    test_eq(cfg.debug, True)\n    test_eq(cfg.log_level, 'DEBUG')\n    test_eq(cfg.timeout, 30)  # unchanged\n\n# Reverted after context\ntest_eq(cfg.debug, False)\ntest_eq(cfg.log_level, 'INFO')",
+    "crumbs": [
+      "Config"
+    ]
+  },
+  {
+    "objectID": "index.html",
+    "href": "index.html",
+    "title": "pote",
+    "section": "",
+    "text": "pip install pote\nA collection of battle-tested (well, by me in my projects) Python utilities extracted from real projects. These are practical helpers that solve common problems across data manipulation, callbacks, configuration, display, and widgets.",
+    "crumbs": [
+      "pote"
+    ]
+  },
+  {
+    "objectID": "index.html#what-is-pote",
+    "href": "index.html#what-is-pote",
+    "title": "pote",
+    "section": "What is pote?",
+    "text": "What is pote?\npote provides utilities that don’t justify their own library but are too useful to keep copying between projects. Each module is focused, well-tested, and designed for immediate use.",
+    "crumbs": [
+      "pote"
+    ]
+  },
+  {
+    "objectID": "index.html#modules",
+    "href": "index.html#modules",
+    "title": "pote",
+    "section": "Modules",
+    "text": "Modules\n\nCore Utilities\n\nbasic - Fundamental Python utilities: nested data access (val_at, vals_at), dict helpers, string utilities, type checking, and more\ntest - Testing helpers beyond fastcore: test_raises, test_afail, test_is_not\nproject - Project setup utilities: global console configuration with Rich theme support\n\n\n\nAdvanced Features\n\ncallback - Callback system for augmenting objects with side-effects, plus CollBack for tracking iteration with callbacks\nconfig - Simple namespace for configuration with context manager for temporary changes\ndisplay - Jupyter display enhancements: Rich integration, collapsible JSON rendering, CSS generation\nwidgets - ipywidgets utilities: widget cleanup, async support, blocking input helpers (requires pip install pote[widgets])\nlogger_loguru - Loguru configuration helpers for structured logging with hierarchical indentation (requires pip install pote[logging])",
+    "crumbs": [
+      "pote"
+    ]
+  },
+  {
+    "objectID": "index.html#quick-start",
+    "href": "index.html#quick-start",
+    "title": "pote",
+    "section": "Quick Start",
+    "text": "Quick Start\nfrom pote.basic import val_at, AD, shorten\nfrom pote.callback import CollBack\n\n# Access nested data with dot notation\ndata = {'user': {'name': 'Alice', 'scores': [10, 20, 30]}}\nval_at(data, 'user.scores.1')  # 20\n\n# Dict with attribute access\nconfig = AD(debug=True, timeout=30)\nconfig.debug  # True\n\n# Track iteration with callbacks\nfor item in CollBack(range(100)):\n    process(item)\n    # Progress tracked automatically",
+    "crumbs": [
+      "pote"
+    ]
+  },
+  {
+    "objectID": "index.html#installation",
+    "href": "index.html#installation",
+    "title": "pote",
+    "section": "Installation",
+    "text": "Installation\npip install pote",
+    "crumbs": [
+      "pote"
+    ]
+  },
+  {
+    "objectID": "index.html#development",
+    "href": "index.html#development",
+    "title": "pote",
+    "section": "Development",
+    "text": "Development\nThese utilities are developed with notebooks using nbdev. Browse the notebooks to see implementation and examples.",
+    "crumbs": [
+      "pote"
+    ]
+  },
+  {
+    "objectID": "index.html#philosophy",
+    "href": "index.html#philosophy",
+    "title": "pote",
+    "section": "Philosophy",
+    "text": "Philosophy\n\nCopy-friendly: See something useful? Copy it with my blessing\nBattle-tested: Extracted from production projects\nDocumented through tests: Examples serve as both tests and documentation",
+    "crumbs": [
+      "pote"
+    ]
+  },
+  {
+    "objectID": "basic.html#empty",
+    "href": "basic.html#empty",
+    "title": "Basic",
+    "section": "empty",
+    "text": "empty\nA sentinel value for distinguishing “no value provided” from None. Useful in function signatures where None is a valid argument.\n\nsource\n\nis_empty\n\ndef is_empty(\n    x\n)-&gt;bool:\n\n\ntest_is(str(empty), 'empty')\nempty\n\nempty\n\n\n\ndef test_empty() -&gt; Empty: return empty\ntest_eq_type(test_empty(), empty)",
+    "crumbs": [
+      "Basic"
+    ]
+  },
+  {
+    "objectID": "basic.html#ad",
+    "href": "basic.html#ad",
+    "title": "Basic",
+    "section": "AD",
+    "text": "AD\nAttribute Dict - a dictionary that also allows attribute-style access. Perfect for configuration objects or API responses where you want both config['key'] and config.key syntax.\n\nsource\n\nAD\n\ndef AD(\n    args:VAR_POSITIONAL, kwargs:VAR_KEYWORD\n):\n\ndict subclass that also provides access to keys as attrs\n\n# Basic usage: dict and attribute access\nad = AD(a=1, b=2)\ntest_eq(ad.a, 1)\ntest_eq(ad['a'], 1)\n\nad.b = 3\ntest_eq(ad.b, 3)\nad.update(a=4, b=5)\ntest_eq(ad.b, 5)\n\n\n# Edge cases: empty dict, missing keys\nad = AD()\ntest_fail(lambda: ad.a)\ntest_fail(lambda: ad['b'])",
+    "crumbs": [
+      "Basic"
+    ]
+  },
+  {
+    "objectID": "basic.html#is_listy",
+    "href": "basic.html#is_listy",
+    "title": "Basic",
+    "section": "is_listy",
+    "text": "is_listy\nTest whether x is iterable but not a string or bytes. Useful for duck-typing checks where you want to handle collections but not strings.\n\nsource\n\nis_listy_type\n\ndef is_listy_type(\n    x\n):\n\n\nsource\n\n\nis_listy\n\ndef is_listy(\n    x\n):\n\n\n# Common usage: distinguish collections from strings\ntest_is(is_listy([1, 2, 3]), True)\ntest_is(is_listy((1, 2, 3)), True)\ntest_is(is_listy({'a': 1}), True)\ntest_is(is_listy('hello'), False)  # strings are NOT listy\ntest_is(is_listy(b'bytes'), False)  # bytes are NOT listy\ntest_is(is_listy(None), False)\n\n\n# Coverage: ranges, generators, and type checking\ntest_is(is_listy(range(3)), True)\ntest_is(is_listy((i for i in range(3))), True)\ntest_is(is_listy(FC.L(1, 2, 3)), True)\ntest_is(is_listy({1, 2, 3}), True)\ntest_is(is_listy(r'raw string'), False)\n\ntest_is(is_listy_type(list), True)\ntest_is(is_listy_type(tuple), True)\ntest_is(is_listy_type(dict), True)\ntest_is(is_listy_type(str), False)\ntest_is(is_listy_type(NoneType), False)",
+    "crumbs": [
+      "Basic"
+    ]
+  },
+  {
+    "objectID": "basic.html#flatten",
+    "href": "basic.html#flatten",
+    "title": "Basic",
+    "section": "flatten",
+    "text": "flatten\nRecursively flatten nested collections into a single generator. Unlike itertools.chain, handles arbitrarily nested structures.\n\nsource\n\nflatten\n\ndef flatten(\n    o\n):\n\nConcatenate all collections and items as a generator\n\n# Basic usage: flatten arbitrarily nested structures\ntest_eq(list(flatten([1, 2, 3])), [1, 2, 3])  # already flat\ntest_eq(list(flatten([1, [2, 3]])), [1, 2, 3])\ntest_eq(list(flatten([[1], [2], [3]])), [1, 2, 3])\ntest_eq(list(flatten((1, (2, 3)))), [1, 2, 3])  # works with tuples\ntest_eq(list(flatten([('a', (2,)), ('c', (4,))])), ['a', 2, 'c', 4])\n\n\n# Coverage: empty list\ntest_eq(list(flatten([])), [])",
+    "crumbs": [
+      "Basic"
+    ]
+  },
+  {
+    "objectID": "basic.html#almost-dataclass",
+    "href": "basic.html#almost-dataclass",
+    "title": "Basic",
+    "section": "Almost dataclass",
+    "text": "Almost dataclass\nA dataclass that allows you to specify fields with default values.\n\ndef _flds(o, *args): return tuple(_ for _ in inspect.get_annotations(o).keys())+args\n\n\nclass A:\n    a: str\n    b: str\n\n_flds(A), _flds(A, 'c')\n\n(('a', 'b'), ('a', 'b', 'c'))\n\n\n\n_flds(A)\n\n()\n\n\n\nsource\n\nFields\n\ndef Fields(\n    args:VAR_POSITIONAL, # type: ignore\n    but:str='', cast:bool=False, store_args:NoneType=None\n):\n\nSet annotated fields of self extracted from caller’s locals; *args -&gt; optional (None), **kwargs -&gt; defaults\n\nclass A:\n    a: str\n    b: str\n    def __init__(self, a:str,  b:str, c=None, d='ff'): Fields('e', f=7.3)#FC.store_attr(_flds(self), c=None, d=7.3)\n\no = A('aa', 'bb')\n# test_eq(vars(o)['__stored_args__'], {'e': None, 'a': 'aa', 'b': 'bb', 'c': None, 'd': 'ff', 'f': 7.3})\ntest_eq(A.__fields__, ('a', 'b', 'c', 'd', 'e', 'f'))  # type: ignore\nprint(inspect.signature(A))\nvars(o)\n\n(a: 'str', b: 'str', c=None, d='ff')\n\n\n{'a': 'aa', 'b': 'bb', 'c': None, 'd': 'ff', 'e': None, 'f': 7.3}\n\n\n\nclass Chapter(FC.AttrDict):\n    \"A chapter of a book\"\n    def __init__(self, num:int, lines:slice, title:str, pov:str, content:str): Fields(ids={})\n    @property\n    def meta(self): return [self[_] for _ in type(self).__fields__ if _ not in ('ids', 'content')]  # type: ignore\n    @property\n    def text(self):\n        r = self.lines\n        return '/n'.join(lines[r.start:r.stop])  # type: ignore\n\n_ch = Chapter(1, slice(0, 10), 'title', 'pov', 'contents')\n_ch\n\n{ 'content': 'contents',\n  'ids': {},\n  'lines': slice(0, 10, None),\n  'num': 1,\n  'pov': 'pov',\n  'title': 'title'}\n\n\n\ninspect.signature(Chapter)\n\n&lt;Signature (num: 'int', lines: 'slice', title: 'str', pov: 'str', content: 'str')&gt;\n\n\n\n_ch.meta\n\n[1, slice(0, 10, None), 'title', 'pov']\n\n\n\nclass Book(list):\n    \"A book\"\n    title: str\n    author: str\n    def __init__(self, title,  author): Fields()\n    @property\n    def front_matter(self): return FC.AttrDict({k:getattr(self, k) for k in ('title', 'author')})\n    @property\n    def body(self) -&gt; Sequence[Chapter]: return tuple(*self)\n\nbk = Book('Tiempo Atrás', 'Rafael Marín')\nbk, bk.front_matter, bk.body\n\n([], {'title': 'Tiempo Atrás', 'author': 'Rafael Marín'}, ())",
+    "crumbs": [
+      "Basic"
+    ]
+  },
+  {
+    "objectID": "basic.html#shorten",
+    "href": "basic.html#shorten",
+    "title": "Basic",
+    "section": "shorten",
+    "text": "shorten\nTruncate strings intelligently from left, right, or center. Useful for displaying long identifiers, paths, or data in logs and UIs.\n\nsource\n\nshortens\n\ndef shortens(\n    xs:Iterable[Any], mode:Literal['l', 'r', 'c']='l', limit:int=40, trunc:str='…', empty:str=''\n):\n\n\nsource\n\n\nshorten\n\ndef shorten(\n    x:Any, mode:Literal['l', 'r', 'c']='l', limit:int=40, trunc:str='…', empty:str=''\n)-&gt;str:\n\n\n# Basic usage: truncate from left (default), right, or center\nuuid = 'ad2663b4-5ff5-40e3-a6ed-cc35f5627f8d'\ntest_eq(shorten(uuid, limit=17), '…a6ed-cc35f5627f8d')  # left truncation (default)\ntest_eq(shorten(uuid, 'r', limit=17), 'ad2663b4-5ff5-40e…')  # right truncation\ntest_eq(shorten(uuid, 'c', limit=17), 'ad2663b … 5627f8d')  # center truncation\n\ntest_eq(shorten('It was the best of times', limit=12), '…est of times')\n\n\n# Coverage: short strings (no truncation), numbers, empty\ntest_eq(shorten(0), '0')\ntest_eq(shorten(234), '234')\ntest_eq(shorten('asdfgh'), 'asdfgh')  # under limit, no change\n\n\ntest_eq(list(shortens(['ad2663b4-5ff5-40e3-a6ed-cc35f5627f8d'], 'l', 10)), ['…35f5627f8d'])\ntest_eq(list(shortens(('abcdef', 'wertyu', 'sd'), 'r', 4)), ['abcd…', 'wert…', 'sd'])\ntest_eq(''.join(shortens('It was the best of times...'.split(), 'r', 1, '')), 'Iwtbot')",
+    "crumbs": [
+      "Basic"
+    ]
+  },
+  {
+    "objectID": "basic.html#runner",
+    "href": "basic.html#runner",
+    "title": "Basic",
+    "section": "Runner",
+    "text": "Runner\nCreate a function that runs multiple callables in sequence with the same arguments. Useful for side-effects like logging, validation, and updates without explicit chaining.\n\nsource\n\nRunner\n\ndef Runner(\n    fns:_FuncItem\n)-&gt;Callable:\n\nReturn a function that runs callables fns in sequence with same arguments.  Only side-effects, no composition.\n\ndef f1(o,x,y=0): o.r += x+y\ndef f2(o,x,y=0): o.r += x*y\nf3 = lambda o, x,y: print(o.r)\n\no = SimpleNamespace(r=0)\nrunner = Runner(f1, f2, f3)\nrunner(o, 2, 3)  # 11\n\nRunner()(o, 2, 3)\ntest_eq(o.r, 11)\nRunner([f1, f2], f3)(o, 2, 3)\ntest_eq(o.r, 22)\nRunner([f1, [f2, f3]])(o, 2, 3)\ntest_eq(o.r, 33)\n\n11\n22\n33",
+    "crumbs": [
+      "Basic"
+    ]
+  },
+  {
+    "objectID": "basic.html#setattrs",
+    "href": "basic.html#setattrs",
+    "title": "Basic",
+    "section": "setattrs",
+    "text": "setattrs\nCopy attributes from one object/dict to another. Works bidirectionally: can copy from dict→object, object→dict, object→object, or dict→dict.\nCommon use cases: - Initialize objects from configuration dicts - Copy specific fields between instances - Hydrate objects from API responses\nParameters: - dest: Target object or dict to set attributes on - src: Source object or dict to read from - flds: Comma-separated field names (optional; defaults to all keys/public attrs)\n\nsource\n\nsetattrs\n\ndef setattrs(\n    dest, src, flds:str=''\n):\n\nSet flds or keys() or dir() attributes from src into dest\n\nclass A: a = 1; b = 2; c = 3\na = A()\nsetattrs(a, {'b': 22, 'd': 44})\ntest_eq(a.a, 1)\ntest_eq(a.b, 22)\ntest_eq(a.c, 3)\ntest_eq(a.d, 44)  # type: ignore",
+    "crumbs": [
+      "Basic"
+    ]
+  },
+  {
+    "objectID": "basic.html#val_at---implementation-evolution",
+    "href": "basic.html#val_at---implementation-evolution",
+    "title": "Basic",
+    "section": "val_at - Implementation Evolution",
+    "text": "val_at - Implementation Evolution\nThe following cells document the development process of val_at, showing how the implementation evolved to handle increasingly complex cases (dicts → lists → mixed → JSON strings). This section is preserved for design rationale but can be skipped by most users.\nSkip to Nested Data Access if you just want to use the function.\n\nInitial attempt: Simple dict-only version\n\ndef val_at(element, json):\n    return reduce(operator.getitem, element.split('.'), json)\n\nj = {\"app\": {\n    \"Garden\": {\n        \"Flowers\": {\n            \"Red flower\": \"Rose\",\n            \"White Flower\": \"Jasmine\",\n            \"Yellow Flower\": \"Marigold\"\n        }\n    },\n    \"Fruits\": {\n        \"Yellow fruit\": \"Mango\",\n        \"Green fruit\": \"Guava\",\n        \"White Flower\": \"groovy\"\n    },\n    \"Trees\": {\n        \"label\": {\n            \"Yellow fruit\": \"Pumpkin\",\n            \"White Flower\": \"Bogan\"\n        }\n    }\n}}\n\ntest_eq(val_at('app.Garden.Flowers.White Flower', j), 'Jasmine')\n\n\nprint((dp := 'app.Garden.Flowers'), reduce(operator.getitem, dp.split('.'), j))\n\napp.Garden.Flowers {'Red flower': 'Rose', 'White Flower': 'Jasmine', 'Yellow Flower': 'Marigold'}\n\n\n\ndef val_at(element, j:str):\n    d = json.loads(j)\n    return reduce(lambda d, k: d[k] if isinstance(d, Mapping) else d[int(k)], element.split('.'), d)\n\nj2 = {\"app\": {\n    \"Garden\": {\n        \"Flowers\": {\n            \"Red flower\": \"Rose\",\n            \"White Flower\": \"Jasmine\",\n            \"Yellow Flower\": \"Marigold\"\n        }\n    },\n    \"Fruits\": {\n        \"Yellow fruit\": [\"Mango\", {\"Banana\": [\"Canary Island\", \"Puerto Rico\"]}],\n        \"Green fruit\": \"Guava\",\n        \"White Flower\": \"groovy\"\n    },\n    \"Trees\": {\n        \"label\": {\n            \"Yellow fruit\": \"Pumpkin\",\n            \"White Flower\": \"Bogan\"\n        }\n    }\n}}\ntest_eq(val_at('app.Fruits.Yellow fruit.1.Banana.0', json.dumps(j2)), 'Canary Island')\n\n\napollo_astronauts = json.loads(Path('static/apollo_astronauts.json').read_text())\nprint((dp := 'Apollo 11.Michael Collins'), reduce(operator.getitem, dp.split('.'), apollo_astronauts))\n\nApollo 11.Michael Collins {'Experience': 'Pilot on Gemini 10 and Command Module pilot on Apollo 11.', 'Place in history': 'Collins was the first person to perform two EVAs in one mission.', 'Fast fact': 'Collins says his \"secret terror\" was returning to Earth alone if the surface mission failed.', 'Lunar wisdom': 'I really believe that if the political leaders of the world could see their planet from a distance of 100,000 miles their outlook could be fundamentally changed. That all-important border would be invisible, that noisy argument silenced.'}\n\n\n\n_T = TypeVar('_T')\n_II = isinstance\ndef _at(d: Mapping|Sequence, k: str) -&gt; Any: return (\n    d[k] if _II(d, Mapping) else \n    d[int(k)] if _II(d, Sequence) and not _II(d, (str, bytes)) else \n    FC.stop(KeyError))  # type: ignore\n\ndef val_at(key_path: str, j: Mapping|Sequence|str|bytes|bytearray, default:_T=empty, sep:str='.') -&gt; _T:\n    \"Return nested value at `key_path` from `j`. Raise if not found or `default` if not `empty`.\"\n    try: return reduce(_at, key_path.split(sep), json.loads(j) if _II(j, (str, bytes, bytearray)) else j)\n    except (KeyError, IndexError, ValueError) as e:\n        if default is not empty: return default\n        raise e\n\ndef key_at(key_path: str, j: Mapping|Sequence|str|bytes|bytearray, sep:str='.') -&gt; bool:\n    \"Return `True` if nested `key_path` exists in `j`.\"\n    try:\n        reduce(_at, key_path.split(sep), json.loads(j) if _II(j, (str, bytes, bytearray)) else j)\n        return True\n    except (KeyError, IndexError):\n        return False\n\n\nFC.test_fail(lambda: val_at(object, {}))  # type: ignore\nFC.test_fail(lambda: val_at(object, []))  # type: ignore\nFC.test_fail(lambda: val_at(object, object))  # type: ignore\nFC.test_fail(lambda: val_at('', {}))\nFC.test_fail(lambda: val_at('', []))\nFC.test_fail(lambda: val_at('', object))   # type: ignore\n\nFC.test_fail(lambda: val_at('a.b', {'a': 1}))\ntest_eq(val_at('a.b', {'a': 1}, None), None)\n\n\nd = [\n    {'a': 1, 'b': [2,  3], 'c': {'d':   4}}, \n    {'a': 5, 'b': [6,  7],                 'd': [{'e': 81}, {'e': 82}]}, \n    {'a': 9, 'b': [10, 11], 'c': {'d': 12}}\n]\n\ntest_fail(lambda: val_at('', d))\ntest_fail(lambda: val_at(object, d))  # type: ignore\n\ntest_fail(lambda: val_at('', object))  # type: ignore\n\ntest_eq(val_at('0.a', d), 1)\ntest_eq(val_at('1.b', d), [6, 7])\ntest_eq(val_at('2.c', d), {'d': 12})\n\n\nj2 = {\n    \"app\": {\n        \"Garden\": {\n            \"Flowers\": {\n                \"Red flower\": \"Rose\",\n                \"White Flower\": \"Jasmine\",\n                \"Yellow Flower\": \"Marigold\"\n            }\n        },\n        \"Fruits\": {\n            \"Yellow fruit\": [\"Mango\", {\"Banana\": [\"Canary Island\", \"Puerto Rico\"]}],\n            \"Green fruit\": \"Guava\",\n            \"White Flower\": \"groovy\"\n        },\n        \"Trees\": {\n            \"label\": {\n                \"Yellow fruit\": \"Pumpkin\",\n                \"White Flower\": \"Bogan\"\n            }\n        },\n        \"Numbers\": [1, 2, 3, 4, 5],\n        \"Boolean\": True,\n        \"Null\": None\n    }\n}\n\nj2_str = json.dumps(j2)\n\ntest_eq(val_at('app.Fruits.Yellow fruit.1.Banana.0', j2_str), 'Canary Island')\ntest_eq(val_at('app.Garden.Flowers.Red flower', j2_str), 'Rose')\ntest_eq(val_at('app.Numbers.2', j2_str), 3)\ntest_eq(val_at('app.Boolean', j2_str), True)\ntest_eq(val_at('app.Null', j2_str), None)\ntest_fail(lambda: val_at('app.NonExistent', j2_str))\ntest_fail(lambda: val_at('app.Fruits.Yellow fruit.3', j2_str))\ntest_is(val_at('app.Fruits.Yellow fruit.3', j2_str, None), None)\n\ntest_eq(key_at('app.Garden.Flowers.Red flower', j2_str), True)\ntest_eq(key_at('app.Numbers.2', j2_str), True)\ntest_eq(key_at('app.Fruits.Yellow fruit.1.Banana.0', j2_str), True)\ntest_eq(key_at('app.NonExistent', j2_str), False)\ntest_eq(key_at('app.Fruits.Yellow fruit.3', j2_str), False)",
+    "crumbs": [
+      "Basic"
+    ]
+  },
+  {
+    "objectID": "basic.html#vals_at---implementation-evolution",
+    "href": "basic.html#vals_at---implementation-evolution",
+    "title": "Basic",
+    "section": "vals_at - Implementation Evolution",
+    "text": "vals_at - Implementation Evolution\nSimilar to val_at, this section shows the iterative development of wildcard path traversal. The implementation needed to handle returning empty sentinels for missing paths while still extracting values from partial matches.\nSkip to vals_at, vals_atpath for the final implementation and usage examples.\n\nEarly wildcard implementation\n\n_E = object()\n\ndef vals_at(path, d) -&gt; empty | tuple[empty | object, ...] | object:\n    \"Return nested values-- or empty|(empty, ...)-- at `path` with wildcards '*' from `d`.\"\n    curr, wc, rest = str(path).partition('*')\n    if not wc and not rest:  return o if (o := val_at(curr, d, _E)) is not _E else empty\n    o = val_at(curr.rstrip('.'), d, _E) if curr else d\n    try: return (tuple(map(lambda x: empty if (res := vals_at(rest.lstrip('.'), x)) is _E else res, o))  # type: ignore\n        if rest and o is not _E else o)\n    except TypeError: return empty\n\ntest_eq(vals_at('a', object), empty)\n\n\nd = [\n    {'a': 1, 'b': [2,  3],  'c': {'d':   4}}, \n    {'a': 5, 'b': [6,  7],                  'd': [{'e': 81}, {'e': 82}]}, \n    {'a': 9, 'b': [10, 11], 'c': {'d': 12}}\n]\n\ntest_eq(vals_at('', d), empty)\ntest_eq(vals_at(object, d), empty)\ntest_eq(vals_at('*', d), (*d,))\ntest_eq(vals_at(2, d), d[2])\ntest_eq(vals_at('a', d), empty)\ntest_eq(vals_at('*.a', []), ())\ntest_eq(vals_at('*.a.*.b', [{'a': object}]), (empty,))\n\ntest_eq(vals_at('*,a', d), (empty, empty, empty))\ntest_eq(vals_at('*.a', d), (1, 5, 9))\ntest_eq(vals_at('*.a.*', d), (1,5,9))\ntest_eq(vals_at('*.b.1', d), (3, 7, 11))\ntest_eq(vals_at('*.c.d', d), (4, empty, 12))\n\ntest_eq(vals_at('*.d.*.e', d), (empty, (81, 82), empty))\ntest_eq(vals_at('*.d.*.f', d), (empty, (empty, empty), empty))\ntest_eq(vals_at('1.d.*.e', d), (81, 82))\n\n\nvals_at('*', d)\n\n[{'a': 1, 'b': [2, 3], 'c': {'d': 4}},\n {'a': 5, 'b': [6, 7], 'd': [{'e': 81}, {'e': 82}]},\n {'a': 9, 'b': [10, 11], 'c': {'d': 12}}]",
+    "crumbs": [
+      "Basic"
+    ]
+  },
+  {
+    "objectID": "basic.html#val_at-val_atpath",
+    "href": "basic.html#val_at-val_atpath",
+    "title": "Basic",
+    "section": "val_at, val_atpath",
+    "text": "val_at, val_atpath\nLookup values in nested structures using dot notation (val_at) or path sequences (val_atpath).\nWhy use these? - Cleaner than chained ['key1']['key2'][0] access - Safe default values instead of try/except blocks - Works with dicts, lists, objects, and JSON strings - Handles mixed nesting (lists within dicts, etc.)\nUse val_at when you have a dot-separated path string: 'user.addresses.0.city'\nUse val_atpath when you have individual path components: 'user', 'addresses', 0, 'city'\nRelated utilities: - has_key(o, 'dot.path') / has_path(o, *path) - Check if path exists without retrieving value - vals_at(o, 'path.*.with.wildcards') - Extract multiple values using wildcards (see below)\n\nsource\n\nhas_path\n\ndef has_path(\n    o, path:str \\| int\n)-&gt;bool:\n\nReturn True if nested path exists.\n\nsource\n\n\nhas_key\n\ndef has_key(\n    o, attr:str, sep:str='.'\n)-&gt;bool:\n\nReturn True if nested dot-separated attr exists.\n\nsource\n\n\nval_atpath\n\ndef val_atpath(\n    o, path:str \\| int, default:Any=empty\n):\n\nTraverse nested o looking for attributes/items specified in path.\n\nsource\n\n\nat_\n\ndef at_(\n    o, # Object to traverse (dict, list, object, or nested combination)\n    sym:str, # Path using dots and/or brackets (e.g., 'a.b[0].c' or 'a[b][c]')\",\n    default:Any, # Value to return if path not found (raises exception if not provided)\n    sep:str='.', # Separator for path segments\n)-&gt;Any: # Value at the specified path\n\nTraverse nested o using path sym with dot notation and/or bracket indexing\nat_ provides flexible path-based access to nested data structures:\nSupported types: o can be/contains any combination of Sequence, Mapping (dicts, lists, tuples, L, etc), objects with __getitem__, and/or dataclasses, objects with attributes accesible by getattr.\nPath syntax: - Dot notation: 'a.b.c' accesses o['a']['b']['c'] or o.a.b.c - Bracket notation: 'a[b][c]' is equivalent to 'a.b.c': [x] is a shorthand for .x - Mixed: 'a.b[0].c' combines both styles - Numeric indices: 'items.2' or 'items[2]' for list/array access - Empty path: '' returns the object itself\nAccess priority: Item access ([]) is tried before attribute access (.)\nError handling: Raises exception if path not found, unless default is provided\n\ntest_eq(at_({'a': 13}, 'a'), 13)\n\ntest_eq(at_({'a': {'b': 13}}, 'a.b'), 13)\ntest_eq(at_({'a': dict2obj({'b': 13})}, 'a.b'), 13)\n\ntest_eq(at_({'a': {'3': 7}}, 'a.3'), 7)\n\ntest_fail(lambda: at_(o, 'app.NonExistent'))\ntest_fail(lambda: at_(o, '[0'))\ntest_fail(lambda: at_(None, 'a'))\ntest_eq(at_(None, 'a', None), None)\ntest_fail(lambda: at_(None, 'a'))\n\ntest_eq(at_(o := {'meta': [1,2,3]}, ''), o)\ntest_eq(at_(o, 'meta[2]'), 3)\ntest_eq(at_(o, 'meta.2'), 3)\n\ntest_eq(at_('xyz', 'a', None), None)\ntest_eq(at_((s := 'xyz'), 'split'), s.split)\n\ntest_eq(at_([{'a':1}], '[0][a]'), 1)\n\n\n# Basic usage: access nested data with dot notation\ndata = {'user': {'name': 'Alice', 'scores': [10, 20, 30]}}\ntest_eq(val_at(data, 'user.name'), 'Alice')\ntest_eq(val_at(data, 'user.scores.1'), 20)  # list index\n\nj2_list = [{'a':1}, {'b':2}]\ntest_eq(val_at(j2_list, '0'), {'a':1})\ntest_eq(val_at(j2_list, '0.a'), 1)\n\n# Safe default instead of exception\ntest_eq(val_at(data, 'user.age', default=25), 25)\n\n\ntest_eq(at_(j2_list, '0'), {'a':1})\ntest_eq(at_(j2_list, '1'), {'b':2})\ntest_eq(at_(j2_list, '[0][a]'), 1)\ntest_eq(at_(j2_list, '0.a'), 1)\ntest_eq(at_(j2_list, '[1].b'), 2)\n\n\n# Basic usage: access nested data with dot notation\ndata = {'user': {'name': 'Alice', 'scores': [10, 20, 30]}}\ntest_eq(val_at(data, 'user.name'), 'Alice')\ntest_eq(val_at(data, 'user.scores.1'), 20)  # list index\n\n# Safe default instead of exception\ntest_eq(val_at(data, 'user.age', default=25), 25)\n\n\n# Works with lists of dicts (common in API responses)\nrecords = [\n    {'id': 1, 'items': [2, 3], 'meta': {'count': 4}}, \n    {'id': 5, 'items': [6, 7], 'nested': [{'val': 81}, {'val': 82}]}, \n    {'id': 9, 'items': [10, 11], 'meta': {'count': 12}}\n]\n\ntest_eq(val_at(records, '0.id'), 1)\ntest_eq(val_at(records, '1.items'), [6, 7])\ntest_eq(val_at(records, '2.meta'), {'count': 12})\n\n\ntest_eq(at_(records, '[2].meta'), {'count': 12})\ntest_eq(at_(records, '2[meta]'), {'count': 12})\n\n\n# Error handling: raises when path not found (unless default provided)\ntest_fail(lambda: val_at({}, 'a.b'))\ntest_fail(lambda: val_at([], 'a.b'))\ntest_fail(lambda: val_at({'a': 1}, 'a.b'))\ntest_fail(lambda: val_atpath({'a': 1}, 'a', 'b'))\n\n# With default, no error\ntest_eq(val_at({'a': 1}, 'a.b', None), None)\n\n\nj2 = {\n    \"app\": {\n        \"Garden\": {\n            \"Flowers\": {\n                \"Red flower\": \"Rose\",\n                \"White Flower\": \"Jasmine\",\n                \"Yellow Flower\": \"Marigold\"\n            }\n        },\n        \"Fruits\": {\n            \"Yellow fruit\": [\"Mango\", {\"Banana\": [\"Canary Island\", \"Puerto Rico\"]}],\n            \"Green fruit\": \"Guava\",\n            \"White Flower\": \"groovy\"\n        },\n        \"Trees\": {\n            \"label\": {\n                \"Yellow fruit\": \"Pumpkin\",\n                \"White Flower\": \"Bogan\"\n            }\n        },\n        \"Numbers\": [1, 2, 3, 4, 5],\n        \"Boolean\": True,\n        \"Null\": None\n    }\n}\n\nj2_str = j2#json.dumps(j2)\n\ntest_eq(val_at(j2_str, 'app.Fruits.Yellow fruit.1.Banana.0'), 'Canary Island')\ntest_eq(val_at(j2_str, 'app.Garden.Flowers.Red flower'), 'Rose')\ntest_eq(val_at(j2_str, 'app.Numbers.2'), 3)\ntest_eq(val_at(j2_str, 'app.Boolean'), True)\ntest_eq(val_at(j2_str, 'app.Null'), None)\ntest_fail(lambda: val_at(j2_str, 'app.NonExistent'))\ntest_fail(lambda: val_at(j2_str, 'app.Fruits.Yellow fruit.3'))\ntest_is(val_at(j2_str, 'app.Fruits.Yellow fruit.3', None), None)\n\n\nj2_obj = dict2obj(j2)\n\nval_at(j2_obj, 'app.Fruits.Yellow fruit.1.Banana.0')\ntest_eq(val_at(j2_str, 'app.Null'), None)\ntest_eq(val_at(j2_str, 'app.Boolean'), True)\ntest_fail(lambda: val_at(j2_str, 'app.NonExistent'))\n\n\ntest_eq(has_key(j2_str, 'app.Garden.Flowers.Red flower'), True)\ntest_eq(has_key(j2_str, 'app.Numbers.2'), True)\ntest_eq(has_key(j2_str, 'app.Fruits.Yellow fruit.1.Banana.0'), True)\ntest_eq(has_key(j2_str, 'app.NonExistent'), False)\ntest_eq(has_key(j2_str, 'app.Fruits.Yellow fruit.3'), False)\n\n\ntest_eq(at_(j2, 'app[Numbers][2]'), 3)\ntest_eq(at_(j2, 'app[Fruits][Yellow fruit][1][Banana][0]'), 'Canary Island')\ntest_eq(at_(j2, 'app.Fruits[Yellow fruit].1.Banana[0]'), 'Canary Island')\n\ntest_eq(at_(dict2obj(j2), 'app[Fruits][Yellow fruit][1][Banana][0]'), 'Canary Island')\ntest_eq(at_(dict2obj(j2), 'app.Fruits[Yellow fruit].1.Banana[0]'), 'Canary Island')\n\ntest_is(at_(j2, '[bad][path]', 'default'), 'default')\ntest_is(at_(j2, '[missing]', None), None)\ntest_is(at_(j2, 'app[missing]', 'default'), 'default')\ntest_is(at_(j2, 'app[NonExistent]', None), None)\n\n\ntest_fail(lambda:val_at(None, '0'))\ntest_eq(val_at(None, '0', None), None)\ntest_fail(lambda:val_atpath(None, 2))\ntest_eq(val_atpath(None, 2, default=None), None)\ntest_fail(lambda:val_atpath(None, -1))\ntest_eq(val_atpath(None, -1, default=None), None)\ntest_fail(lambda:val_at(None, '0.1'))\ntest_eq(val_at(None, '0.1', None), None)\ntest_fail(lambda:val_atpath(None, 4, 'b'))\ntest_eq(val_atpath(None, 4, 'b', default=None), None)\n\ntest_fail(lambda:val_atpath([], 1))\ntest_eq(val_atpath([], 1, default=None), None)\ntest_fail(lambda:val_atpath([], 'a', 2))\ntest_eq(val_atpath([], ('a', 2), default=None), None)  # type: ignore\n\ntest_fail(lambda:val_atpath({}, 1))\ntest_eq(val_atpath({}, 1, default=None), None)\ntest_fail(lambda:val_atpath(object(), '2'))\ntest_eq(val_at(object(), '0', None), None)\ntest_fail(lambda:val_at(object(), 'a.1'))\ntest_eq(val_at(object(), 'a.1', None), None)\n\n\no = [1, 2, 3, [4, 5, 6], 7]\ntest_eq(val_at(o, '0'), 1)\ntest_eq(val_at(o, '-1'), 7)\ntest_eq(val_atpath(o, -1), 7)\ntest_eq(val_atpath(o, 2), 3)\ntest_eq(val_atpath(o, 3, 2), 6)\ntest_eq(val_atpath(o, 5, default=None), None)\ntest_eq(val_at(o, '3.4', None), None)\n\no = dict(a=1, b=2, c=3, d=dict(e=4, f=5), g=6)\ntest_eq(val_atpath(o, 'b'), 2)\ntest_eq(val_atpath(o, 'd', 'f'), 5)\ntest_eq(val_at(o, 'd.f'), 5)\ntest_eq(val_at(o, 'd.g', None), None)\n\n(s := json.dumps(['foo', (1,2,3), {'bar': ('baz', None, 1.0, 2)}]))\no = json.loads(s)\ntest_eq(val_at(o, '0'), 'foo')\ntest_eq(val_atpath(o, 0), 'foo')\ntest_eq(val_at(o, '2.bar'), ['baz', None, 1.0, 2])\ntest_eq(val_atpath(o, 2, 'bar'), ['baz', None, 1.0, 2])\ntest_eq(val_at(o, '2.bar.3'), 2)\ntest_eq(val_at(o, '3.bar', None), None)\ntest_eq(val_atpath(o, 2, 'foo', default=None), None)\n\n@dataclasses.dataclass\nclass _D:\n    a: int\n    b: str\n    c: float\n    d: dict[str, Any]\n_d = _D(1, '2', 3.0, {'e': 4, 'f': '5', 'g': 6.0})\n\no = [0, 1, _d, 'a']\ntest_eq(val_atpath(o, 1), 1)\ntest_eq(val_at(o, '3'), 'a')\ntest_eq(val_atpath(o, 2), _d)\ntest_eq(val_at(o, '2.c'), 3.0)\ntest_eq(val_at(o, '2.d.f'), '5')",
+    "crumbs": [
+      "Basic"
+    ]
+  },
+  {
+    "objectID": "basic.html#vals_at-vals_atpath",
+    "href": "basic.html#vals_at-vals_atpath",
+    "title": "Basic",
+    "section": "vals_at, vals_atpath",
+    "text": "vals_at, vals_atpath\nLookup multiple values using wildcards in paths. Think of it as a lightweight JSONPath for common cases.\nWhen to use: Extract values from all items in a collection without explicit loops.\ndata = [\n    {'user': {'name': 'Alice', 'age': 30}},\n    {'user': {'name': 'Bob', 'age': 25}},\n]\nvals_at(data, '*.user.name')  # ('Alice', 'Bob')\nRelated utilities: - val_at / val_atpath - Single value extraction (see above) - filter_empty=True parameter - Remove empty sentinels from results for cleaner output\n\nsource\n\nvals_at\n\ndef vals_at(\n    o, path:str, filter_empty:bool=False\n)-&gt;tuple[Any, ...]:\n\nReturn nested values– or empty|(empty, …)– at path with wildcards ’’ from o.*\n\nsource\n\n\nvals_atpath\n\ndef vals_atpath(\n    o, path:Any, filter_empty:bool=False\n)-&gt;tuple[Any, ...]:\n\nReturn nested values– or empty|(empty, …)– at path with wildcards ’’ from d.*\n\ntest_eq(vals_atpath(object, ''), ())\ntest_eq(vals_atpath(object, 'a'), ())\ntest_eq(vals_atpath(object, '*', 'a'), ())\ntest_eq(vals_atpath(object, '*', 'a', '*'), ())\n\ntest_eq(vals_atpath(['a', 'b'], 'a'), ())\ntest_eq(vals_atpath(['a', 'b'], '*'), ('a', 'b'))\ntest_eq(vals_atpath(['a', 'b'], '*', 'a'), ())\n\ntest_eq(vals_atpath(['a', 'b'], 0), ('a',))\ntest_eq(vals_atpath(['a', 'b'], 2), ())\n\ntest_eq(vals_atpath([{'a':1}], 'a'), ())\ntest_eq(vals_atpath([{'a':1}], '*'), [{'a':1}])\ntest_eq(vals_atpath([{'a':1}, {'a':2}], '*', 'a'), (1, 2))\n\n\ntest_eq(vals_at(object, ''), (object,))\ntest_eq(vals_at(object, 'a'), ())\ntest_eq(vals_at(object, '*.a'), ())\ntest_eq(vals_at(object, '*.a.*'), ())\n\ntest_eq(vals_at(['a', 'b'], 'a'), ())\ntest_eq(vals_at(['a', 'b'], '*'), ('a', 'b'))\ntest_eq(vals_at(['a', 'b'], '*.a'), ())\n\ntest_eq(vals_at(['a', 'b'], '0'), ('a',))\ntest_eq(vals_at(['a', 'b'], '2'), ())\n\ntest_eq(vals_at([{'a':1}], 'a'), ())\ntest_eq(vals_at([{'a':1}], '*'), [{'a':1}])\ntest_eq(vals_at([{'a':1}, {'a':2}], '*.a'), (1, 2))\n\n\nd = [\n    {'a': 1, 'b': [2,  3],  'c': {'d':   4}}, \n    {'a': 5, 'b': [6,  7],                  'd': [{'e': 81}, {'e': 82}]}, \n    {'a': 9, 'b': [10, 11], 'c': {'d': 12}}\n]\n\ntest_eq(vals_atpath(d, ''), ())\ntest_eq(vals_atpath(d, object), ())  # type: ignore\ntest_eq(vals_atpath(d, '*'), (*d,))\ntest_eq(vals_atpath(d, 2), (d[2],))\ntest_eq(vals_atpath(d, '2'), ())\ntest_eq(vals_atpath(d, 'a'), ())\ntest_eq(vals_atpath([], '*', 'a'), ())#())\ntest_eq(vals_atpath([{'a': object}], '*', 'a', '*', 'b'), ())\n\ntest_eq(vals_atpath(d, '*', 'a'), (1, 5, 9))\ntest_eq(vals_atpath(d, '*', 'a', '*'), (1,5,9))\ntest_eq(vals_atpath(d, '*', 'b', 1), (3, 7, 11))\ntest_eq(vals_atpath(d, '*', 'c', 'd'), (4, empty, 12))\ntest_eq(vals_atpath(d, '*', 'c', 'd', filter_empty=True), (4, 12))\n\ntest_eq(vals_atpath(d, '*', 'd', '*', 'e'), (empty, (81, 82), empty))\ntest_eq(vals_atpath(d, '*', 'd', '*', 'e', filter_empty=True), ((81, 82),))\ntest_eq(vals_atpath(d, '*', 'd', '*', 'f'), ())\ntest_eq(vals_atpath(d, 1, 'd', '*', 'e'), (81, 82))\n\n\nd = [\n    {'a': 1, 'b': [2,  3],  'c': {'d':   4}}, \n    {'a': 5, 'b': [6,  7],                  'd': [{'e': 81}, {'e': 82}]}, \n    {'a': 9, 'b': [10, 11], 'c': {'d': 12}}\n]\n\ntest_eq(vals_at(d, ''), (d,))\ntest_fail(lambda: vals_at(d, object))  # type: ignore\ntest_eq(vals_at(d, '*'), (*d,))\ntest_eq(vals_at(d, '2'), (d[2],))\ntest_eq(vals_at(d, 'a'), ())\ntest_eq(vals_at([], '*.a'), ())#())\ntest_eq(vals_at([{'a': object}], '*.a.*.b'), ())\n\ntest_eq(vals_at(d, '*,a'), ())\ntest_eq(vals_at(d, '*.a'), (1, 5, 9))\ntest_eq(vals_at(d, '*.a.*'), (1,5,9))\ntest_eq(vals_at(d, '*.b.1'), (3, 7, 11))\ntest_eq(vals_at(d, '*.c.d'), (4, empty, 12))\ntest_eq(vals_at(d, '*.c.d', filter_empty=True), (4, 12))\n\ntest_eq(vals_at(d, '*.d.*.e'), (empty, (81, 82), empty))\ntest_eq(vals_at(d, '*.d.*.e', filter_empty=True), ((81, 82),))\ntest_eq(vals_at(d, '*.d.*.f'), ())\ntest_eq(vals_at(d, '1.d.*.e'), (81, 82))",
+    "crumbs": [
+      "Basic"
+    ]
+  },
+  {
+    "objectID": "basic.html#deep_in",
+    "href": "basic.html#deep_in",
+    "title": "Basic",
+    "section": "deep_in",
+    "text": "deep_in\nCheck if a value exists anywhere in a nested structure (recursively searches dicts and iterables).\n\ndef deep_in(o:Mapping|Iterable, val):\n    \"return True if val is in nested collections\"\n    if isinstance(o, Mapping):\n        return val in o.values() or any(deep_in(v, val) for v in o.values() if isinstance(v, (Mapping, Iterable)))\n    elif isinstance(o, Iterable):\n        return val in o or any(deep_in(v, val) for v in o if isinstance(v, (Mapping, Iterable)))\n    raise ValueError(f\"deep_in: o must be a Mapping or Iterable, got {type(o)}\")\n\n\ntest_fail(lambda:deep_in(None, 1))  # type: ignore\ntest_eq(deep_in((), 1), False)\ntest_eq(deep_in((1,), 1), True)\ntest_eq(deep_in((1,), 2), False)\ntest_eq(deep_in({'a': 1}, 1), True)\ntest_eq(deep_in({'a': 1}, 2), False)\ntest_eq(deep_in({'a': (1,)}, 1), True)\ntest_eq(deep_in({'a': (1,)}, 2), False)\ntest_eq(deep_in({'a': {'b': 1}}, 1), True)\ntest_eq(deep_in({'a': {'b': 1}}, 2), False)\ntest_eq(deep_in({'a': {'b': (1,)}}, 1), True)\ntest_eq(deep_in({'a': {'b': (1,)}}, 2), False)\n\n\ndef deep_in_v1(o:Mapping|Iterable, val):\n    \"return True if val is in o\"\n    if isinstance(o, Mapping):\n        for v in o.values():\n            if v == val or (is_listy(v) and deep_in_v1(v, val)): return True\n        return False\n    elif isinstance(o, Iterable):\n        if val in o: return True\n        return any(deep_in_v1(v, val) for v in o if is_listy(v))\n    raise ValueError(f\"deep_in: o must be a Mapping or Iterable, got {type(o)}\")\n\n\ndef deep_in_v2(o:Mapping|Iterable, val):\n    stack = deque([o])\n    while stack:\n        curr = stack.popleft()\n        if isinstance(curr, Mapping):\n            if val in curr.values(): return True\n            stack.extend(v for v in curr.values() if is_listy(v))\n        elif isinstance(curr, Iterable):\n            if val in curr: return True  \n            stack.extend(v for v in curr if is_listy(v))\n        else:\n            raise ValueError(f\"deep_in: o must be a Mapping or Iterable, got {type(curr)}\")\n    return False\n\n\ndef deep_in_v3(o:Mapping|Iterable, val):\n    def _search(obj):\n        if isinstance(obj, Mapping):\n            yield from obj.values()\n            for v in obj.values():\n                if is_listy(v): yield from _search(v)\n        elif isinstance(obj, Iterable):\n            yield from obj\n            for v in obj:\n                if is_listy(v): yield from _search(v)\n        else:\n            raise ValueError(f\"deep_in: o must be a Mapping or Iterable, got {type(obj)}\")\n    \n    return val in _search(o)\n\n\ntest_data = [\n    ((), 1), ((1,), 1), ((1,), 2), ({'a': 1}, 1), ({'a': 1}, 2),  \n    ({'a': (1,)}, 1), ({'a': (1,)}, 2), ({'a': {'b': 1}}, 1), \n    ({'a': {'b': 1}}, 2), ({'a': {'b': (1,)}}, 1), ({'a': {'b': (1,)}}, 2)\n]\n\nfor o, val in test_data:\n    orig = deep_in(o, val)\n    test_eq(deep_in_v1(o, val), orig)\n    test_eq(deep_in_v2(o, val), orig) \n    test_eq(deep_in_v3(o, val), orig)\n\n\nPerformance exploration\nThe following cells test alternative implementations of deep_in to find the best balance between clarity and speed. The chosen implementation (exported above) uses recursive traversal with early termination.\n\ndeep_data = {'level1': {'level2': {'level3': {'level4': [1, 2, 3, {'deep': 'target'}]}}}}\n\ndef time_function(func, data, target, iterations=10000):\n    start = time.time()\n    for _ in range(iterations):\n        func(data, target)\n    return time.time() - start\n\nprint(\"\\nPerformance comparison (10000 iterations):\")\ntarget = 'target'\ntimes = {}\ntimes['original'] = time_function(deep_in, deep_data, target)\ntimes['v1_single_iter'] = time_function(deep_in_v1, deep_data, target)\ntimes['v2_stack_based'] = time_function(deep_in_v2, deep_data, target)\ntimes['v3_generator'] = time_function(deep_in_v3, deep_data, target)\n\nfor name, t in times.items():\n    speedup = times['original'] / t if t &gt; 0 else float('inf')\n    print(f\"{name:15}: {t:.4f}s (speedup: {speedup:.2f}x)\")\n\n\nPerformance comparison (10000 iterations):\noriginal       : 0.0899s (speedup: 1.00x)\nv1_single_iter : 0.0554s (speedup: 1.62x)\nv2_stack_based : 0.0628s (speedup: 1.43x)\nv3_generator   : 0.0764s (speedup: 1.18x)\n\n\n\nsource\n\n\ndeep_in\n\ndef deep_in(\n    o:Mapping \\| Iterable, val\n):\n\nreturn True if val is in nested collections",
+    "crumbs": [
+      "Basic"
+    ]
+  },
+  {
+    "objectID": "basic.html#pops_",
+    "href": "basic.html#pops_",
+    "title": "Basic",
+    "section": "pops_",
+    "text": "pops_\nPop multiple keys from a dict into a new dict. Useful for extracting specific kwargs or splitting a config dict.\nRelated: pops_values_ returns a tuple of values instead of a dict; gets for non-destructive retrieval.\n\nsource\n\npops_\n\ndef pops_(\n    d:dict, ks:Hashable\n)-&gt;dict:\n\nPop existing ks items from d in-place into a dictionary.\n\n# Usage: extract specific keys from a dict\nd = {'a': 1, 'b': 2, 'c': 3}\nextracted = pops_(d, 'a', 'b')\ntest_eq(extracted, {'a': 1, 'b': 2})\ntest_eq(d, {'c': 3})  # original dict modified\n\n\n# Coverage: missing keys, empty dict, duplicates\ntest_eq(pops_({'a': 1, 'b': 2, 'c': 3}, 'd'), {})  # missing keys ignored\ntest_eq(pops_({'a': 1, 'b': 2, 'c': 3}, 'a', 'c', 'd'), {'a': 1, 'c': 3})  # some missing\ntest_eq(pops_({}, 'a'), {})  # empty dict\ntest_eq(pops_({'a': 1}, 'a', 'a'), {'a': 1})  # duplicate keys",
+    "crumbs": [
+      "Basic"
+    ]
+  },
+  {
+    "objectID": "basic.html#pops_values_",
+    "href": "basic.html#pops_values_",
+    "title": "Basic",
+    "section": "pops_values_",
+    "text": "pops_values_\nLike pops_ but returns a tuple of values instead of a dict. Missing keys get Parameter.empty as placeholder. Useful for unpacking: a, b, c = pops_values_(d, 'a', 'b', 'c')\nRelated: pops_ returns a dict; gets for non-destructive retrieval.\n\nsource\n\npops_values_\n\ndef pops_values_(\n    d:dict, ks:Hashable\n)-&gt;tuple:\n\nPop existing ks items from d in-place into a tuple of values or Parameter.empty for missing keys.\n\ntest_eq(pops_values_({'a': 1, 'b': 2, 'c': 3}, 'a', 'b'), (1, 2))\ntest_eq(pops_values_({'a': 1, 'b': 2, 'c': 3}, 'd'), (Parameter.empty,))\ntest_eq(pops_values_({'a': 1, 'b': 2, 'c': 3}, 'a', 'c', 'd'), (1, 3, Parameter.empty))\ntest_eq(pops_values_({}, 'a'), (Parameter.empty,))\ntest_eq(pops_values_({'a': 1}, 'a', 'a'), (1, Parameter.empty))",
+    "crumbs": [
+      "Basic"
+    ]
+  },
+  {
+    "objectID": "basic.html#gets",
+    "href": "basic.html#gets",
+    "title": "Basic",
+    "section": "gets",
+    "text": "gets\nFetch multiple values from a dict as a tuple. Missing keys return Parameter.empty. Useful for unpacking multiple config values at once.\nRelated: pops_ / pops_values_ for destructive (modifying) retrieval.\n\nsource\n\ngets\n\ndef gets(\n    d:Mapping, ks:Hashable\n):\n\nFetches ks values, or Parameter.empty for missing keys, from d into a tuple.\n\n# Usage: unpack multiple config values at once\nconfig = {'host': 'localhost', 'port': 8080, 'debug': True}\nhost, port = gets(config, 'host', 'port')\ntest_eq((host, port), ('localhost', 8080))\n\n# Missing keys return Parameter.empty\ntest_eq(gets({'a': 1, 'b': 2}, 'a', 'c', 'b'), (1, Parameter.empty, 2))\n\n\n# Coverage: empty args, Path keys, reordering\ntest_eq(gets({'a': 1, 'b': 2}), ())  # no keys requested\na, b = gets({'a': 1, 'b': 2}, 'b', 'a')  # reordered\ntest_eq((a, b), (2, 1))\n\nd = {Path('a'): 1, Path('b'): 2}  # non-string keys\ntest_eq(gets(d, Path('a'), Path('c'), Path('b')), (1, Parameter.empty, 2))",
+    "crumbs": [
+      "Basic"
+    ]
+  },
+  {
+    "objectID": "basic.html#update_",
+    "href": "basic.html#update_",
+    "title": "Basic",
+    "section": "update_",
+    "text": "update_\nUpdate dict/object with kwargs, skipping values equal to empty_value. Useful for conditional updates where you don’t want to set None or other sentinel values.\n\n# def update_(d:dict|None=None, /, empty_value=None, **kwargs):\n#     \"Update `d` in-place with `kwargs` whose values aren't `empty_value`\"\n#     d = d if d is not None else {}\n#     for k, v in kwargs.items():\n#         if v is not empty_value: d[k] = v\n#     return d\n\n\nsource\n\nupdate_\n\ndef update_(\n    dest:NoneType=None, empty_value:NoneType=None, kwargs:VAR_KEYWORD\n)-&gt;Any:\n\nUpdate dest in-place with kwargs whose values aren’t empty_value\nHelper for conditionally updating dictionaries/namespaces.\n\n# Usage: conditionally update dict (skip None by default)\nd = {'a': 1}\nupdate_(d, b=2, c=None)\ntest_eq(d, {'a': 1, 'b': 2})  # c=None was skipped\n\n# Custom empty_value sentinel\nd = {}\nupdate_(d, a=True, b=Parameter.empty, empty_value=Parameter.empty)\ntest_eq(d, {'a': True})  # b was skipped\n\n\n# Works with objects too (uses setattr)\nclass Config: host = 'localhost'; port = 8000\ncfg = update_(Config(), host='0.0.0.0', timeout=None)\ntest_eq(cfg.host, '0.0.0.0')\ntest_eq(cfg.port, 8000)  # unchanged\ntest_is(hasattr(cfg, 'timeout'), False)  # None was skipped\n\n\n# Coverage: create new dict, AD dict\nd = update_(a=1, b=None)  # dest=None creates new dict\ntest_eq(d, {'a': 1})\n\nad = AD(a=1, b=2)\nupdate_(ad, a=3, b=4, c=5)\ntest_eq(ad.a, 3)\ntest_eq(ad.c, 5)\n\n\nad = AD(a=1, b=2)\nupdate_(ad, a=3, b=4, c=5)\ntest_eq(ad.a, 3)\ntest_eq(ad.b, 4)\ntest_eq(ad.c, 5)",
+    "crumbs": [
+      "Basic"
+    ]
+  },
+  {
+    "objectID": "basic.html#bundle_path",
+    "href": "basic.html#bundle_path",
+    "title": "Basic",
+    "section": "bundle_path",
+    "text": "bundle_path\nGet the directory containing a module. Useful for finding resources bundled with your package.\n\nsource\n\nbundle_path\n\ndef bundle_path(\n    mod:str \\| ModuleType\n):\n\nReturn the path to the module’s directory or current directory.\n\nimport pote\n\n\ntest_eq(bundle_path(__name__), Path('.'))\ntest_eq(bundle_path('pote').resolve(), Path(pote.__file__).parent)",
+    "crumbs": [
+      "Basic"
+    ]
+  },
+  {
+    "objectID": "basic.html#kounter",
+    "href": "basic.html#kounter",
+    "title": "Basic",
+    "section": "Kounter",
+    "text": "Kounter\nA callable counter that increments and returns the count for each key. Useful for generating sequential IDs grouped by type.\n\nsource\n\nKounter\n\ndef Kounter(\n    \n):\n\nInitialize self. See help(type(self)) for accurate signature.\n\nkounter = Kounter()\ncntr = Kounter()\ncntr('a')\ncntr('b')\ncntr('a')\ncntr('a')\ncntr('b')\ncntr('b')\ncntr('b')\ntest_eq(cntr.d, {'a': 3, 'b': 4})\ntest_eq(cntr('int'), 1)",
+    "crumbs": [
+      "Basic"
+    ]
+  },
+  {
+    "objectID": "basic.html#id_gen",
+    "href": "basic.html#id_gen",
+    "title": "Basic",
+    "section": "id_gen",
+    "text": "id_gen\nCreate a function that generates unique IDs for objects. Without arguments returns a random ID, with an object returns TypeName_N where N increments per type.\n\nlines = Path(\"static/wordlist.txt\").read_text().splitlines()\nwords = [line.strip() for line in lines if line.isalpha()]\n\n\ndef modify_word(word):\n    # Randomly capitalize the first or second letter\n    if len(word) &gt; 1:\n        idx_to_capitalize = random.choice([0, 1])\n        word = word[:idx_to_capitalize] + word[idx_to_capitalize].upper() + word[idx_to_capitalize + 1:]\n    else:\n        word = word.upper()  # If single letter, capitalize it\n    \n    # Randomly add a number (0–99) at the start or end\n    if random.choice([True, False]):\n        number = random.randint(0, 99)\n        # if random.choice([True, False]):\n        #     word = f\"{number}{word}\"  # Number at the start\n        # else:\n        word = f\"{word}{number}\"  # Number at the end\n    \n    return word\n\ndef generate_readable_id(num_words=3):\n    words_part = [modify_word(random.choice(words)) for _ in range(num_words)]\n    id_candidate = '-'.join(words_part)\n\n    # Ensure it's a valid CSS identifier\n    if not re.match(r\"^[a-zA-Z_][\\w\\-]*$\", id_candidate):  # Add '_' if invalid\n        id_candidate = f\"_{id_candidate}\"\n    \n    return f\"{id_candidate}-{random.randint(0, 9999)}\"\n\n\ngenerate_readable_id(), generate_readable_id()\n\n('sEssions-Proportion4-rEminds-1249', 'rApidly37-Not-mEeting-8905')\n\n\n\nsource\n\nid_gen\n\ndef id_gen(\n    \n):\n\n\nsource\n\n\nsimple_id\n\ndef simple_id(\n    \n):\n\nThe id_gen function creates a function that takes any object and generates an unique Id valid during the current session. Useful for creating unique element IDs in dynamic HTML content.\n\nnew_id = id_gen()\nnew_id(), new_id()\n\n('b0b32310b-f0774158-a0c54127-c5617c81',\n 'b9e8bcb6f-9d75594a-dfc71bee-4edd51bc')\n\n\n\nint_id = id_gen()\nint_id(7), int_id(8)\n\n('int_1', 'int_2')\n\n\n\nobj_id = id_gen()\no1, o2 = object(), object()\nprint(obj_id(o1), obj_id(o2))\n\ndict_id = id_gen()\nprint(dict_id(d1 := {'a': 1}), dict_id(d2 := {'a': 1}))\n\npth_id = id_gen()\nprint(pth_id(Path('.')), pth_id(Path()), pth_id(Path('./bin')))\n\nobject_1 object_2\ndict_1 dict_2\nPosixPath_1 PosixPath_2 PosixPath_3",
+    "crumbs": [
+      "Basic"
+    ]
+  },
+  {
+    "objectID": "basic.html#withcountermeta",
+    "href": "basic.html#withcountermeta",
+    "title": "Basic",
+    "section": "WithCounterMeta",
+    "text": "WithCounterMeta\nA metaclass that adds automatic instance counting. Each instance gets a _cnt_ attribute with its creation order number.\n\nsource\n\nWithCounterMeta\n\ndef WithCounterMeta(\n    args:VAR_POSITIONAL, kwargs:VAR_KEYWORD\n):\n\nAdds a _cnt_ attribute to its classes and increments it for each new instance.\n\nclass _T1(metaclass=WithCounterMeta): pass\nclass _T2(metaclass=WithCounterMeta): pass\n\ntest_is(_T1._cnt_, 0)\ntest_is(_T2._cnt_, 0)\n\ntest_is(_T1()._cnt_, 0)\ntest_is(_T1._cnt_, 1)\ntest_is(_T2._cnt_, 0)\n\ntest_is(_T1()._cnt_, 1)\ntest_is(_T2()._cnt_, 0)\ntest_eq(_T1._cnt_, 2)\ntest_eq(_T2._cnt_, 1)",
+    "crumbs": [
+      "Basic"
+    ]
+  },
+  {
+    "objectID": "project.html",
+    "href": "project.html",
+    "title": "Project",
+    "section": "",
+    "text": "setup_console supports theme customization through:\n\nString theme name: Loads from rich_theme_manager if installed\nTheme object: Pass a rich.theme.Theme instance directly\nNone: Uses default Rich theme\n\nExample with theme manager:\n# Requires: pip install rich-theme-manager\nconsole, cprint = setup_console(width=120, theme='monokai')\nExample with custom theme:\nfrom rich.theme import Theme\n\ncustom_theme = Theme({\n    \"info\": \"cyan\",\n    \"warning\": \"yellow\",\n    \"error\": \"bold red\"\n})\nconsole, cprint = setup_console(theme=custom_theme)\n\nsource\n\n\n\ndef setup_console(\n    width:int=140, theme:str \\| object \\| None=None, clear:bool=False, rule:NoneType=None\n)-&gt;tuple[Console, Callable[..., None]]:\n\n\nsource\n\n\n\n\ndef get_console(\n    \n)-&gt;Console:\n\nGlobally configured console\n\nprint(_CONSOLE)\n\n&lt;console width=140 ColorSystem.TRUECOLOR&gt;",
+    "crumbs": [
+      "Project"
+    ]
+  },
+  {
+    "objectID": "project.html#theme-customization",
+    "href": "project.html#theme-customization",
+    "title": "Project",
+    "section": "",
+    "text": "setup_console supports theme customization through:\n\nString theme name: Loads from rich_theme_manager if installed\nTheme object: Pass a rich.theme.Theme instance directly\nNone: Uses default Rich theme\n\nExample with theme manager:\n# Requires: pip install rich-theme-manager\nconsole, cprint = setup_console(width=120, theme='monokai')\nExample with custom theme:\nfrom rich.theme import Theme\n\ncustom_theme = Theme({\n    \"info\": \"cyan\",\n    \"warning\": \"yellow\",\n    \"error\": \"bold red\"\n})\nconsole, cprint = setup_console(theme=custom_theme)\n\nsource\n\n\n\ndef setup_console(\n    width:int=140, theme:str \\| object \\| None=None, clear:bool=False, rule:NoneType=None\n)-&gt;tuple[Console, Callable[..., None]]:\n\n\nsource\n\n\n\n\ndef get_console(\n    \n)-&gt;Console:\n\nGlobally configured console\n\nprint(_CONSOLE)\n\n&lt;console width=140 ColorSystem.TRUECOLOR&gt;",
+    "crumbs": [
+      "Project"
+    ]
+  },
+  {
+    "objectID": "callback.html#hascallbacks",
+    "href": "callback.html#hascallbacks",
+    "title": "Callback",
+    "section": "HasCallbacks",
+    "text": "HasCallbacks\nMixin class that adds callback support to any class. It manages a list of callbacks and provides methods to run them at specific lifecycle points.\nKey features: - Register callbacks via constructor or with_cbs() - Temporary callbacks via this_cbs() context manager - Automatic method delegation for names in cbs_names\n\nsource\n\nHasCallbacks\n\ndef HasCallbacks(\n    cbs:Sequence[Callback]=()\n):\n\nBase for classes that can be augmented with callbacks.\n\nclass Test(HasCallbacks):\n    count = 0\n    cbs_names = ('on_think',)\n    \n    def think(self):\n        self.callback('before_think')\n        self.count += 1\n        print('thinking...')\n        self.on_think()\n        self.callback('after_think')\n\n    def act(self):\n        self.callback('before_act')\n        self.count = 1\n        print('acting...')\n        self.think()\n        self.callback('after_act')\n\n\nclass VerboseCB(Callback):\n    def before_act(self, ctx): print('before_act count:', ctx.count)\n    def after_act(self, ctx): print('after_act count:', ctx.count)\n\ntest = Test()\ntest.act()\ntest_eq(test.count, 2)\n\nprint()\ntest = Test([VerboseCB()])\ntest.act()\ntest_eq(test.count, 2)\nclass ThinkCB(Callback):\n    def on_think(self, ctx): ctx.count += 1\n\nprint()\ntest = Test([VerboseCB(), ThinkCB()])\ntest.act()\ntest_eq(test.count, 3)\n\nacting...\nthinking...\n\nbefore_act count: 0\nacting...\nthinking...\nafter_act count: 2\n\nbefore_act count: 0\nacting...\nthinking...\nafter_act count: 3\n\n\n\nsource\n\n\nwith_cbs\n\ndef with_cbs(\n    nm:str \\| None=None\n):\n\nDecorator to add callbacks to a method.\n\nclass Test(HasCallbacks):\n    count = 0\n    \n    @with_cbs()\n    def think(self):\n        print('thinking...')\n        self.count += 1\n\n    @with_cbs('act')\n    def act(self, cbs:Sequence[Callback]=()):\n        with self.this_cbs(cbs):\n            print('acting...')\n            self.count = 1\n            self.think()\n\n\nclass ActCB(Callback):\n    def before_act(self, ctx): print('before_act count:', ctx.count)\n    def after_act(self, ctx): \n        print('after_act count:', ctx.count)\n        ctx.count += 1\n\nclass ThinkCB(Callback):\n    def before_think(self, ctx): print('before_think count:', ctx.count)\n    def after_think(self, ctx): \n        print('after_think count:', ctx.count)\n        ctx.count += 1\n\n\ntest = Test()\ntest.act()\ntest_eq(test.count, 2)\nprint()\n\ntest = Test([ActCB()])\ntest.act()\ntest_eq(test.count, 3)\nprint()\n\ntest = Test([ActCB()])\ntest.act([ThinkCB()])\ntest_eq(test.count, 4)\n\nacting...\nthinking...\n\nbefore_act count: 0\nacting...\nthinking...\nafter_act count: 2\n\nbefore_act count: 0\nacting...\nbefore_think count: 1\nthinking...\nafter_think count: 2\nafter_act count: 3",
+    "crumbs": [
+      "Callback"
+    ]
+  },
+  {
+    "objectID": "callback.html#collback-vs-standard-iteration",
+    "href": "callback.html#collback-vs-standard-iteration",
+    "title": "Callback",
+    "section": "CollBack vs Standard Iteration",
+    "text": "CollBack vs Standard Iteration\nStandard iteration:\nfor item in items:\n    process(item)  # No visibility into progress, timing, or position\nWith CollBack:\nfor item in CollBack(items, cbs=[LogProgressCB()]):\n    process(item)  # Auto-logging of progress, timing, position",
+    "crumbs": [
+      "Callback"
+    ]
+  },
+  {
+    "objectID": "callback.html#common-use-cases",
+    "href": "callback.html#common-use-cases",
+    "title": "Callback",
+    "section": "Common Use Cases",
+    "text": "Common Use Cases\n\nFile processing — Track progress through large files\nData pipelines — Monitor throughput and estimate completion time\nTraining loops — Report epoch/batch progress with callbacks\nAPI calls — Rate limit, retry, log responses without cluttering business logic\nTesting — Inject behavior for debugging without modifying code\n\n\nsource\n\nCollBack\n\ndef CollBack(\n    source:Iterable[Any]=(), total:int \\| None \\| Type[EmptyT]=empty, context:Any=empty, kwargs:VAR_KEYWORD\n):\n\nTrack iterables and extend them with callbacks.\n\nsource\n\n\ntrackback\n\ndef trackback(\n    source:Iterable[Any], total:int \\| None \\| Type[EmptyT]=empty, context:Any=empty, cbs:Sequence[Callback]=()\n)-&gt;Iterator[tuple[AD[Any], Any]]:",
+    "crumbs": [
+      "Callback"
+    ]
+  },
+  {
+    "objectID": "callback.html#usage-examples",
+    "href": "callback.html#usage-examples",
+    "title": "Callback",
+    "section": "Usage Examples",
+    "text": "Usage Examples\nCollBack is a drop-in replacement for any iterable:\n\ntest_eq(deque([1,2,3], maxlen=3), deque(CollBack([1,2,3]), maxlen=3))\ntest_eq(list(ChainMap({'a':1}, {'b':2})), list(CollBack(ChainMap({'a':1}, {'b':2}))))  # Search multiple dicts\ntest_eq(list(CollBack(Counter('hello').items())), [('h', 1), ('e', 1), ('l', 2), ('o', 1)])\n\nYou can use CollBack to track the progress of any iterable with arbitrary callbacks. It can be used in place of the iterable in any function that takes an iterable.\n\ntuple(CollBack(open('static/file.txt')))  # Line iterator\n\n('line 1\\n', 'line 2\\n', 'line 3\\n')\n\n\n\ntuple(CollBack(open('static/file.txt').read(3)))  # Char iterator\n\n('l', 'i', 'n')\n\n\n\ntuple(CollBack(os.scandir()))  # Directory iterator\n\n(&lt;DirEntry '10_callback.ipynb'&gt;,\n &lt;DirEntry '_quarto.yml'&gt;,\n &lt;DirEntry 'sidebar.yml'&gt;,\n &lt;DirEntry 'styles.css'&gt;,\n &lt;DirEntry '15_config.ipynb'&gt;,\n &lt;DirEntry 'nbdev.yml'&gt;,\n &lt;DirEntry '00_basic.ipynb'&gt;,\n &lt;DirEntry 'static'&gt;,\n &lt;DirEntry '05_test.ipynb'&gt;,\n &lt;DirEntry '.ipynb_checkpoints'&gt;,\n &lt;DirEntry '20_widgets.ipynb'&gt;,\n &lt;DirEntry '17_display.ipynb'&gt;,\n &lt;DirEntry '00_project.ipynb'&gt;,\n &lt;DirEntry 'index.ipynb'&gt;)\n\n\n\ndef print_progress(ctx, line):\n    if ctx.n % 100 == 0:\n        print(f\"Processed {ctx.n} {ctx.elapsed_time:.2f}\")\n\ndef process_line(line): time.sleep(random.uniform(0.0001, 0.0005))\n\nwith open('10_callback.ipynb') as f:\n    for st,line in trackback(f, cbs=[FuncCB(on_iter=print_progress)]):\n        process_line(line)\n\nProcessed 0 0.00\nProcessed 100 0.04\nProcessed 200 0.08\nProcessed 300 0.12\nProcessed 400 0.16\nProcessed 500 0.20\nProcessed 600 0.24\nProcessed 700 0.28\nProcessed 800 0.32\nProcessed 900 0.36\nProcessed 1000 0.40\nProcessed 1100 0.44\nProcessed 1200 0.48\nProcessed 1300 0.52\nProcessed 1400 0.56\nProcessed 1500 0.60\nProcessed 1600 0.64",
+    "crumbs": [
+      "Callback"
+    ]
+  },
+  {
+    "objectID": "callback.html#state-tracking-and-validation",
+    "href": "callback.html#state-tracking-and-validation",
+    "title": "Callback",
+    "section": "State Tracking and Validation",
+    "text": "State Tracking and Validation\nCollBack maintains iteration state and handles edge cases:\n\nfor o in trackback(range(3), cbs=[EchoCB()]): print(o)\n\nbefore_iter ({'n': None, 'total': 3, 'progress': None, 'elapsed_time': None},) {}\n({'item': 0, 'n': 0, 'total': 3, 'progress': 0.3333, 'elapsed_time': None}, 0)\non_iter ({'item': 0, 'n': 0, 'total': 3, 'progress': 0.3333, 'elapsed_time': 0.00010013580322265625}, 0) {}\n({'item': 1, 'n': 1, 'total': 3, 'progress': 0.6667, 'elapsed_time': 0.00010013580322265625}, 1)\non_iter ({'item': 1, 'n': 1, 'total': 3, 'progress': 0.6667, 'elapsed_time': 0.0001499652862548828}, 1) {}\n({'item': 2, 'n': 2, 'total': 3, 'progress': 1.0, 'elapsed_time': 0.0001499652862548828}, 2)\non_iter ({'item': 2, 'n': 2, 'total': 3, 'progress': 1.0, 'elapsed_time': 0.0001900196075439453}, 2) {}\nafter_iter ({'n': 2, 'total': 3, 'progress': 1.0, 'elapsed_time': 0.0001900196075439453},) {}\n\n\n\nt = CollBack(())\ntest_eq(t.total, 0)\nwith test_raises(StopIteration): next(iter(t))\n\nfor _ in (t := CollBack(range(3))):\n    print(t.state)\n\nt = CollBack(range(3))\ntest_eq(t.state, {'n': None, 'total': 3, 'progress': None, 'elapsed_time': None})\ntest_eq(next(it := iter(t)), 0)\ntest_eq(t.state, {'item': 0, 'n': 0, 'total': 3, 'progress': 0.3333, 'elapsed_time': t.elapsed_time})\ntest_eq(next(it), 1)\ntest_eq(t.state, {'item': 1, 'n': 1, 'total': 3, 'progress': 0.6667, 'elapsed_time': t.elapsed_time})\ntest_eq(next(it), 2)\ntest_eq(t.state, {'item': 2, 'n': 2, 'total': 3, 'progress': 1.0, 'elapsed_time': t.elapsed_time})\nwith test_raises(StopIteration): next(it)\ntest_eq(t.state, {'n': 2, 'total': 3, 'progress': 1.0, 'elapsed_time': t.elapsed_time})\n\nt = CollBack('abcdef')\ntest_eq([o for o in t], list('abcdef'))\ntest_eq(t.state, {'n': 5, 'total': 6, 'progress': 1.0, 'elapsed_time': t.elapsed_time})\ntest_eq(t.active, False)\n\nt = CollBack(repeat(1, 3))\ntest_eq(list(map(lambda x: x, t)), [1, 1, 1])\ntest_eq(t.state, {'n': 2, 'total': 3, 'progress': 1.0, 'elapsed_time': t.elapsed_time})\n\n{'item': 0, 'n': 0, 'total': 3, 'progress': 0.3333, 'elapsed_time': None}\n{'item': 1, 'n': 1, 'total': 3, 'progress': 0.6667, 'elapsed_time': 4.1961669921875e-05}\n{'item': 2, 'n': 2, 'total': 3, 'progress': 1.0, 'elapsed_time': 6.699562072753906e-05}\n\n\n\nt = CollBack((12, 56, -1, 2, 67), 3)\ntest_eq([o for o in t], (12, 56, -1))\ntest_eq(t.state, {'n': 2, 'total': 3, 'progress': 1.0, 'elapsed_time': t.elapsed_time})\n\n\nt = CollBack(c := (1, 2, -1, -2, 7))\ntest_eq(reduce(lambda x, y: x+y, t), 7)\ntest_eq(t.state, {'n': 4, 'total': 5, 'progress': 1.0, 'elapsed_time': t.elapsed_time})\n\n\nclass CountCB(Callback):\n    def before_iter(self, ctx): self.count = 0\n    def on_iter(self, ctx, _): self.count += 1\n\nwith (t := CollBack(c)).this_cbs([cb := CountCB()]):\n    test_eq(reduce(lambda x, y: x+y, t), 7)\ntest_eq(t.state, {'n': 4, 'total': 5, 'progress': 1.0, 'elapsed_time': t.elapsed_time})\ntest_eq(cb.count, 5)\n\ntest_eq(reduce(lambda x, y: x+y, (t := CollBack(c, cbs=[cb]))), 7)\ntest_eq(t.state, {'n': 4, 'total': 5, 'progress': 1.0, 'elapsed_time': t.elapsed_time})\ntest_eq(cb.count, 5)\n\n\nt = CollBack(repeat(7), 3)\noo = [o for o in t]\ntest_eq(oo, (7, 7, 7))\ntest_eq(t.state, {'n': 2, 'total': 3, 'progress': 1.0, 'elapsed_time': t.elapsed_time})\n\nt = CollBack(repeat(None), None)\nfor _ in t:\n    if t.state.n &gt;= 10: break  # type: ignore\ntest_eq(t.state, {'n': 10, 'total': 11, 'progress': 1.0, 'elapsed_time': t.elapsed_time})\n\ndef fibonacci():\n    a, b = 0, 1\n    while True:\n        yield a\n        a, b = b, a + b\n\ntest_eq(CollBack(fibonacci(), 10), [0, 1, 1, 2, 3, 5, 8, 13, 21, 34])\n\n\nt = CollBack(())\ntest_eq(t.total, 0)\nwith test_raises(StopIteration): next(iter(t))\nfor i in t: pass\n\nt = CollBack(range(6))\ntest_eq(t.state, {'n': None, 'total': 6, 'progress': None, 'elapsed_time': None})\ntest_eq(next(iter(t)), 0)\ntest_eq(t.state, {'n': 0, 'total': 6, 'progress': 0.1667, 'elapsed_time': t.elapsed_time})\n\nt = CollBack(range(6))\ntest_eq([t.n for i in t], range(6))\ntest_eq(t.state, {'n': 5, 'total': 6, 'progress': 1.0, 'elapsed_time': t.elapsed_time})\n\n\nt = CollBack('abc', None)\ntest_eq([_ for _ in t], ('a', 'b', 'c'))\ntest_eq(t.state, {'n': 2, 'total': 3, 'progress': 1.0, 'elapsed_time': t.elapsed_time})",
+    "crumbs": [
+      "Callback"
+    ]
+  },
+  {
+    "objectID": "logger_loguru.html",
+    "href": "logger_loguru.html",
+    "title": "logger_loguru",
+    "section": "",
+    "text": "Provides pre-configured logging setup using Loguru with notebook-friendly defaults and hierarchical indentation support for tracking nested operations.\nKey features:\nconfig_logger() — One-line setup returning configured logger + tree logger\ntree_logger — Hierarchical logging with automatic indentation (llogger.push, llogger.pop)\nLogFormatter — Customizable format with indentation support\nLogLevelFilter — Dynamic level filtering with temporary override\nWhen to use: Need readable, structured logging in notebooks or scripts with hierarchical context tracking (e.g., nested async operations, recursive algorithms).\nTypical usage:",
+    "crumbs": [
+      "logger_loguru"
+    ]
+  },
+  {
+    "objectID": "widgets.html",
+    "href": "widgets.html",
+    "title": "Widgets",
+    "section": "",
+    "text": "Helper to properly cleanup ipywidget instances by closing their comms.\n\nWhen working with ipywidgets in notebooks, each widget creates a comm channel with the kernel. During heavy development, it’s better to close the widgets, to avoid memory leaks and kernel issues.\n\nsource\n\n\n\ndef close_widget(\n    w:W.Widget, all:bool=True\n):\n\n\nsource\n\n\n\n\ndef cleanupwidgets(\n    ws:VAR_POSITIONAL, mod:str \\| None=None, clear:bool=True, all:bool=True\n):\n\n\n_b = W.Button()\ntest_eq(_b.comm is not None, True)\ncleanupwidgets('_b')\ntest_is(_b.comm, None)\n\n\n_b = W.Button()\ntest_eq(_b.comm is not None, True)\ncleanupwidgets('_b')\ntest_is(_b.comm, None)\n\n\nimport ipywidgets.widgets.widget\nimport ipywidgets as W\nfrom IPython.core.getipython import get_ipython\n\n\nipywidgets.widgets.widget._instances\n\n{}\n\n\n\ndef get_active_widget_comms():\n    \"\"\"Get \"official\" list of widget comms\"\"\"\n    ip = get_ipython(); kernel = ip.kernel  # type: ignore\n    if kernel:\n        ks = W.Widget.get_manager_state()['state'].keys()\n        for k,c in kernel.comm_manager.comms.items():\n            if c.comm_id in ks:\n                yield c\n\n\n[*get_active_widget_comms()]\n\n[]\n\n\n\nW.Widget.close_all()",
+    "crumbs": [
+      "Widgets"
+    ]
+  },
+  {
+    "objectID": "widgets.html#input-with-widgets",
+    "href": "widgets.html#input-with-widgets",
+    "title": "Widgets",
+    "section": "input with widgets",
+    "text": "input with widgets\nNow we can develop our pretty input function:\n\nsource\n\nget_user_input\n\ndef get_user_input(\n    prompt:str='', placeholder:str='Write something. Enter to submit', timeout:float=10.0, widget:NoneType=None,\n    value:NoneType=None\n):\n\n\nname = get_user_input('You', placeholder='Input your name; enter to submit', timeout=5.)\nMarkdown(f\"Your intervention has saved the Universe and beyond, **{name}**!\")\n\nYou\n\n\nYour intervention has saved the Universe and beyond, ****!",
+    "crumbs": [
+      "Widgets"
+    ]
+  }
+]
