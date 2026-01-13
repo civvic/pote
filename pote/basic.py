@@ -81,11 +81,11 @@ def _flds(o, *args): return tuple(_ for _ in inspect.signature(o if isinstance(o
 
 # %% ../nbs/00_basic.ipynb
 @FC.delegates(FC.store_attr, but=['names', 'self'])  # type: ignore
-def Fields(*args, **kwargs):
+def Fields(*args, but:tuple[str, ...]=(), **kwargs):
     "Set annotated fields of `self` extracted from caller's locals; `*args` -> optional (None), `**kwargs` -> defaults"
     caller_locals =  sys._getframe(1).f_locals
     o = caller_locals['self']
-    fields = {name: caller_locals[name] for name in _flds(o) if name in caller_locals}
+    fields = {name: caller_locals[name] for name in _flds(o) if name in caller_locals and name not in but}
     fields = {**fields, **{k: None for k in args}, **kwargs}
     # hack to make `store_attr` work with empty dict/list
     proxy = FC.AttrDict(_=None)  
