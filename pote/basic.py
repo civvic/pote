@@ -7,8 +7,9 @@ from __future__ import annotations
 
 # %% auto 0
 __all__ = ['empty', 'val_at', 'is_empty', 'AD', 'is_listy', 'is_listy_type', 'flatten', 'Fields', 'shorten', 'shortens', 'Runner',
-           'setattrs', 'at_', 'val_atpath', 'has_key', 'has_path', 'vals_atpath', 'vals_at', 'deep_in', 'pops_',
-           'pops_values_', 'gets', 'update_', 'bundle_path', 'Kounter', 'simple_id', 'id_gen', 'WithCounterMeta']
+           'setattrs', 'attrrepr', 'at_', 'val_atpath', 'has_key', 'has_path', 'vals_atpath', 'vals_at', 'deep_in',
+           'pops_', 'pops_values_', 'gets', 'update_', 'bundle_path', 'Kounter', 'simple_id', 'id_gen',
+           'WithCounterMeta']
 
 # %% ../nbs/00_basic.ipynb
 import importlib
@@ -130,6 +131,12 @@ def setattrs(dest, src, flds=''):
     elif isinstance(src, dict): flds = src.keys()
     else: flds = (_ for _ in dir(src) if _[0] != '_')
     for fld in flds: s(dest, fld, g(src, fld))
+
+# %% ../nbs/00_basic.ipynb
+def attrrepr(o:object, ks:str):
+    "Return a string repr of `o` with attributes at comma-separated `ks`"
+    vv = ', '.join(k+'='+repr(getattr(o, k)) for k in re.split(', *', ks))
+    return f"{type(o).__name__}({vv})"
 
 # %% ../nbs/00_basic.ipynb
 _empty = Parameter.empty
