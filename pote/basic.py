@@ -134,9 +134,10 @@ def setattrs(dest, src, flds=''):
 
 # %% ../nbs/00_basic.ipynb
 def attrrepr(o:object, ks:str):
-    "Return a string repr of `o` with attributes at comma-separated `ks`"
-    vv = ', '.join(k+'='+repr(getattr(o, k)) for k in re.split(', *', ks))
-    return f"{type(o).__name__}({vv})"
+    "Return a string repr of `o` with attributes from comma-separated `ks` (suffix `+` forces inclusion, others only if truthy)."
+    kk = [k if k[-1]!='+' else k[:-1] for k in re.split(', *', ks) if k[-1]=='+' or bool(getattr(o, k))]
+    vv = ', '.join(k+'='+repr(getattr(o, k)) for k in kk)
+    return f"{type(o).__name__}({vv})"    
 
 # %% ../nbs/00_basic.ipynb
 _empty = Parameter.empty
