@@ -1,0 +1,34 @@
+# pote
+
+> A collection of battle-tested Python utilities extracted from real projects.
+
+`pote` provides utilities that solve common problems across data manipulation, callbacks, configuration, display, and widgets. These are practical helpers too useful to keep copying between projects, but don't justify their own library.
+
+Here are some highlights:
+
+- **Nested data access**: Use `val_at(data, 'user.scores.1')` for safe navigation through nested dicts and lists with dot notation
+- **Attribute dicts**: Replace plain dicts with `AD` to access values as attributes (`config.debug` instead of `config['debug']`)
+- **Callback system**: Add side-effects to any object without modifying its code using `HasCallbacks` mixin
+- **Iteration tracking**: Wrap any iterable with `CollBack` to automatically track progress and timing
+- **Simple config management**: Use `Config` for app settings with context manager support for temporary changes
+- **Rich Jupyter integration**: Enhanced display functions for collapsible JSON, styled output, and custom CSS
+- **Async widget helpers**: Utilities for using ipywidgets with async code and blocking input in notebooks
+
+## Docs
+
+- [README](https://raw.githubusercontent.com/civvic/pote/refs/heads/main/README.md): Quick start guide and overview
+
+## API
+
+- [API List](https://civvic.github.io/pote/apilist.txt): A succint list of all functions and methods in pote.
+
+## Optional
+
+- [Basic helpers](https://civvic.github.io/pote/basic.html.md): Fundamental utilities for data manipulation and type handling
+- [Test helpers](https://civvic.github.io/pote/test.html.md): Testing helpers that extend fastcore's test functions
+- [Project setup](https://civvic.github.io/pote/project.html.md): Project setup utilities and Rich console configuration
+- [Callback system](https://civvic.github.io/pote/callback.html.md): Callback system for augmenting objects with side-effects
+- [Config data](https://civvic.github.io/pote/config.html.md): Configuration namespace with context manager support
+- [Display helpers](https://civvic.github.io/pote/display.html.md): Jupyter display enhancements and Rich integration
+- [Widgets tools](https://civvic.github.io/pote/widgets.html.md): ipywidgets utilities for async and blocking operations (requires pote[widgets])
+- [Logger helpers](https://civvic.github.io/pote/logger_loguru.html.md): Loguru configuration helpers for structured logging (requires pote[logging])

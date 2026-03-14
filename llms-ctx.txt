@@ -1,0 +1,344 @@
+<project title="pote" summary="A collection of battle-tested Python utilities extracted from real projects.">`pote` provides utilities that solve common problems across data manipulation, callbacks, configuration, display, and widgets. These are practical helpers too useful to keep copying between projects, but don't justify their own library.
+
+Here are some highlights:
+
+- **Nested data access**: Use `val_at(data, 'user.scores.1')` for safe navigation through nested dicts and lists with dot notation
+- **Attribute dicts**: Replace plain dicts with `AD` to access values as attributes (`config.debug` instead of `config['debug']`)
+- **Callback system**: Add side-effects to any object without modifying its code using `HasCallbacks` mixin
+- **Iteration tracking**: Wrap any iterable with `CollBack` to automatically track progress and timing
+- **Simple config management**: Use `Config` for app settings with context manager support for temporary changes
+- **Rich Jupyter integration**: Enhanced display functions for collapsible JSON, styled output, and custom CSS
+- **Async widget helpers**: Utilities for using ipywidgets with async code and blocking input in notebooks<docs><doc title="README" desc="Quick start guide and overview"># pote
+
+
+
+``` sh
+pip install pote
+```
+
+A collection of battle-tested (well, by me in my projects) Python
+utilities extracted from real projects. These are practical helpers that
+solve common problems across data manipulation, callbacks,
+configuration, display, and widgets.
+
+## What is pote?
+
+`pote` provides utilities that don’t justify their own library but are
+too useful to keep copying between projects. Each module is focused,
+well-tested, and designed for immediate use.
+
+## Modules
+
+### Core Utilities
+
+- **[basic](basic.html)** - Fundamental Python utilities: nested data
+  access ([`val_at`](https://civvic.github.io/pote/basic.html#val_at),
+  [`vals_at`](https://civvic.github.io/pote/basic.html#vals_at)), dict
+  helpers, string utilities, type checking, and more
+- **[test](test.html)** - Testing helpers beyond fastcore:
+  [`test_raises`](https://civvic.github.io/pote/test.html#test_raises),
+  [`test_afail`](https://civvic.github.io/pote/test.html#test_afail),
+  [`test_is_not`](https://civvic.github.io/pote/test.html#test_is_not)
+- **[project](project.html)** - Project setup utilities: global console
+  configuration with Rich theme support
+
+### Advanced Features
+
+- **[callback](callback.html)** - Callback system for augmenting objects
+  with side-effects, plus
+  [`CollBack`](https://civvic.github.io/pote/callback.html#collback) for
+  tracking iteration with callbacks
+- **[config](config.html)** - Simple namespace for configuration with
+  context manager for temporary changes
+- **[display](display.html)** - Jupyter display enhancements: Rich
+  integration, collapsible JSON rendering, CSS generation
+- **[widgets](widgets.html)** - ipywidgets utilities: widget cleanup,
+  async support, blocking input helpers (requires
+  `pip install pote[widgets]`)
+- **[logger_loguru](logger_loguru.html)** - Loguru configuration helpers
+  for structured logging with hierarchical indentation (requires
+  `pip install pote[logging]`)
+
+## Quick Start
+
+``` python
+from pote.basic import val_at, AD, shorten
+from pote.callback import CollBack
+
+# Access nested data with dot notation
+data = {'user': {'name': 'Alice', 'scores': [10, 20, 30]}}
+val_at(data, 'user.scores.1')  # 20
+
+# Dict with attribute access
+config = AD(debug=True, timeout=30)
+config.debug  # True
+
+# Track iteration with callbacks
+for item in CollBack(range(100)):
+    process(item)
+    # Progress tracked automatically
+```
+
+## Installation
+
+``` sh
+pip install pote
+```
+
+## Development
+
+These utilities are developed with notebooks using
+[nbdev](https://nbdev.fast.ai/). Browse the
+[notebooks](https://github.com/yourusername/pote/tree/main/nbs) to see
+implementation and examples.
+
+## Philosophy
+
+- **Copy-friendly**: See something useful? Copy it with my blessing
+- **Battle-tested**: Extracted from production projects
+- **Documented through tests**: Examples serve as both tests and
+  documentation</doc></docs><api><doc title="API List" desc="A succint list of all functions and methods in pote."># pote Module Documentation
+
+## pote.basic
+
+> Fundamental Python utilities for data manipulation, type checking, and common operations
+
+- `class Empty`
+
+- `class EmptyT`
+
+- `class AD`
+    `dict` subclass that also provides access to keys as attrs
+
+    - `def __getattr__(self, k)`
+    - `def __setattr__(self, k, v)`
+    - `def __dir__(self)`
+    - `def copy(self)`
+
+- `def flatten(o)`
+    Concatenate all collections and items as a generator
+
+- `def Runner(*fns)`
+    Return a function that runs callables `fns` in sequence with same arguments. 
+    Only side-effects, no composition.
+
+- `def setattrs(dest, src, flds)`
+    Set `flds` or keys() or dir() attributes from `src` into `dest`
+
+- `def val_at(o, attr, default, sep)`
+    Traverse nested `o` looking for attributes/items specified in dot-separated `attr`.
+
+- `def val_atpath(o, *path)`
+    Traverse nested `o` looking for attributes/items specified in `path`.
+
+- `def has_key(o, attr, sep)`
+    Return `True` if nested dot-separated `attr` exists.
+
+- `def has_path(o, *path)`
+    Return `True` if nested `path` exists.
+
+- `def vals_atpath(o, *path)`
+    Return nested values-- or empty|(empty, ...)-- at `path` with wildcards '*' from `d`.
+
+- `def vals_at(o, path, filter_empty)`
+    Return nested values-- or empty|(empty, ...)-- at `path` with wildcards '*' from `o`.
+
+- `def deep_in(o, val)`
+    return True if val is in nested collections
+
+- `def pops_(d, *ks)`
+    Pop existing `ks` items from `d` in-place into a dictionary.
+
+- `def pops_values_(d, *ks)`
+    Pop existing `ks` items from `d` in-place into a tuple of values or `Parameter.empty` for missing keys.
+
+- `def gets(d, *ks)`
+    Fetches `ks` values, or `Parameter.empty` for missing keys, from `d` into a tuple.
+
+- `def update_(empty_value, **kwargs)`
+    Update `dest` in-place with `kwargs` whose values aren't `empty_value`
+
+- `def bundle_path(mod)`
+    Return the path to the module's directory or current directory.
+
+- `class Kounter`
+    - `def __init__(self)`
+    - `def __call__(self, k)`
+
+- `class WithCounterMeta`
+    Adds a `_cnt_` attribute to its classes and increments it for each new instance.
+
+    - `def __call__(cls, *args, **kwargs)`
+    - `def __new__(cls, name, bases, dict)`
+
+## pote.callback
+
+> Extensible callback system for augmenting objects and tracking iterations
+
+- `class Callback`
+    Base class of callbacks.
+
+
+- `def run_cbs(cbs, method_nm, ctx, *args, **kwargs)`
+    Run `method_nm(ctx, ...)` of each callback in `cbs` in order.
+
+- `class EchoCB`
+    Print the arguments.
+
+    - `def echo(self, ctx, *args, **kwargs)`
+    - `def __getattr__(self, name)`
+
+- `class FuncCB`
+    Store functions that can be called as callbacks.
+
+    - `def __init__(self, **kwargs)`
+
+- `class PassCB`
+    A callback that does nothing.
+
+    - `def noop(self, *args, **kwargs)`
+    - `def __getattr__(self, name)`
+
+- `class HasCallbacks`
+    Base for classes that can be augmented with callbacks.
+
+    - `def __new__(cls, *args, **kwargs)`
+    - `def __init__(self, cbs)`
+    - `def with_cbs(self, cbs, extend)`
+    - `@contextmanager def this_cbs(self, cbs)`
+        Use temporary `cbs` in `with` block.
+
+    - `def __getattr__(self, name)`
+        Run `name` as a callback if it's in `self.cbs_names`.
+
+    - `def callback(self, method_nm, *args, **kwargs)`
+
+- `class with_cbs`
+    Decorator to add callbacks to a method.
+
+    - `def __init__(self, nm)`
+    - `def __call__(self, f)`
+
+- `class CollBack`
+    Track iterables and extend them with callbacks.
+
+    - `def __init__(self, source, total, context, **kwargs)`
+    - `@property def progress`
+    - `@property def state`
+    - `def __repr__(self)`
+    - `def __iter__(self)`
+    - `def trackback(self, cbs)`
+
+- `def process_(cbs, slc, pred, context, **kwargs)`
+    Process a subset `slc` of `iterable` filtered by `pred` with callbacks from `cbs` and `FuncCB` `kwargs`
+
+## pote.config
+
+> Configuration container with temporary context manager for scoped changes
+
+- `class Config`
+    Store of arbitrary values
+
+    - `def __repr__(self)`
+    - `def update(self, **kwargs)`
+    - `def as_dict(self)`
+    - `@contextmanager def __call__(self, **kwargs)`
+
+## pote.display
+
+> Rich display utilities and dynamic CSS for Jupyter notebooks
+
+- `class RenderJSON`
+    - `def __init__(self, json_data, max_height, init_level)`
+    - `def display(self)`
+
+- `class GlobalCSS`
+    - `def has_style(self, name)`
+    - `@property def css`
+    - `def add(self, name, css, update)`
+    - `def update(self, name, css)`
+    - `def display(self)`
+    - `def __init__(self, css)`
+
+## pote.logger_loguru
+
+> Loguru configuration helpers for structured logging with indentation
+
+- `class LogFormatter`
+    Formats log records with indentation for tree-structured output
+
+    - `def __init__(self)`
+    - `def format(self, record)`
+        Format record with current indentation level
+
+
+- `class LogLevelFilter`
+    Filter log records by minimum level with context manager for temporary override
+
+    - `def __init__(self, level)`
+    - `def __call__(self, record)`
+        Return True if record meets minimum level threshold
+
+    - `@contextmanager def temp(self, tmp_level)`
+        Temporarily override filter level within context
+
+
+- `class tree_logger`
+    Logger wrapper managing hierarchical indentation for tree-structured output
+
+    - `def __init__(self, logger, fmt)`
+    - `@property def level`
+        Current indentation level (0=root)
+
+    - `@property def indent`
+        Current indentation string using box drawing chars
+
+    - `def __getattr__(self, name)`
+        Proxy logger methods with indent bound; handle push/pop
+
+    - `def reset(self)`
+        Reset indentation to root level
+
+    - `@contextmanager def inc_indent(self)`
+        Context manager temporarily increasing indent by one level
+
+    - `def bracket_logging(self, header_f, *attr_n)`
+        Decorator for async methods: log entry with indent, auto-pop on exit
+
+
+- `def setup_logger(logger, name)`
+    Apply standard config (format, level filter, backtrace) to logger
+
+- `def config_logger(logger)`
+    Configure logger with colors and return (logger, tree_logger) tuple
+
+## pote.project
+
+> Global console configuration for consistent output across projects
+
+- `def get_console()`
+    Globally configured console
+
+## pote.test
+
+> Additional test utilities complementing `fastcore.test`
+
+- `def test_is_not(a, b)`
+    `test` that `a is not b`
+
+## pote.widget
+
+> Utilities for ipywidgets: cleanup, async interaction, and blocking input
+
+- `class Clickable`
+    Button with value.
+
+    - `def __init__(self, description, **kwargs)`
+
+- `def yield_for_change(widget, attribute)`
+    Pause a generator to wait for a widget change event.
+        
+    This is a decorator for a generator function which pauses the generator on yield
+    until the given widget attribute changes. The new value of the attribute is
+    sent to the generator and is the value of the yield.
+</doc></api></project>
