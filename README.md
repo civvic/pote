@@ -23,7 +23,7 @@ well-tested, and designed for immediate use.
 ### Core Utilities
 
 - **[basic](basic.html)** - Fundamental Python utilities: nested data
-  access ([`val_at`](https://civvic.github.io/pote/basic.html#val_at),
+  access (`val_at`,
   [`vals_at`](https://civvic.github.io/pote/basic.html#vals_at)), dict
   helpers, string utilities, type checking, and more
 - **[test](test.html)** - Testing helpers beyond fastcore:
