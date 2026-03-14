@@ -1,25 +1,34 @@
 [build-system]
-requires = ["setuptools>=64.0"]
+requires = ["setuptools>=64"]
 build-backend = "setuptools.build_meta"
 
-# [project]
-# name = "pote"
-# version = "0.0.1"
-# description = "Python helpers, utils or code not worthy of its own repo"
-# requires-python = ">=3.10"
-# authors = [
-#     {name = "Spikey", email = "civvic@gmail.com"}
-# ]
-# dependencies = [
-#     "fastcore>=1.5.28",
-#     "rich>=13.3.2", 
-#     "ipywidgets>=8.1.5",
-#     "jupyter_ui_poll>=1.0.0"
-# ]
+[project]
+name = "pote"
+dynamic = ["version"]
+description = "Python helpers, utils or code not worthy ot its own repo"
+readme = "README.md"
+requires-python = ">=3.11"
+license = {text = "Apache-2.0"}
+authors = [{name = "Spikey", email = "civvic@gmail.com"}]
+keywords = ['python', 'nbdev', 'jupyter', 'notebook', 'javascript']
+classifiers = ["Natural Language :: English", "Intended Audience :: Developers", "Development Status :: 3 - Alpha", "Programming Language :: Python :: 3", "Programming Language :: Python :: 3 :: Only"]
+dependencies = ['fastcore>=1.5.28', 'rich>=13.3.2', 'ipywidgets>=8.1.5', 'jupyter_ui_poll>=1.0.0', 'loguru>=0.7.0']
 
-# [project.optional-dependencies]
-# dev = [
-#     "notebook>=7.2.2",
-#     "nbdev>=2.3.33",
-#     "reorder-python-imports>=3.1.0"
-# ]
+[project.urls]
+Repository = "https://github.com/civvic/pote"
+Documentation = "https://civvic.github.io/pote"
+
+[project.entry-points.nbdev]
+pote = "pote._modidx:d"
+
+[project.optional-dependencies]
+dev = ['notebook', 'jupyterlab', 'nbclassic', 'nbdev']
+
+[tool.setuptools.dynamic]
+version = {attr = "pote.__version__"}
+
+[tool.setuptools.packages.find]
+include = ["pote"]
+
+[tool.nbdev]
+allowed_cell_metadata_keys = ['solveit_ai']
