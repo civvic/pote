@@ -7,8 +7,9 @@ from __future__ import annotations
 
 # %% auto 0
 __all__ = ['empty', 'val_at', 'is_empty', 'AD', 'is_listy', 'is_listy_type', 'flatten', 'Fields', 'shorten', 'shortens', 'Runner',
-           'setattrs', 'at_', 'val_atpath', 'has_key', 'has_path', 'vals_atpath', 'vals_at', 'deep_in', 'pops_',
-           'pops_values_', 'gets', 'update_', 'bundle_path', 'Kounter', 'simple_id', 'id_gen', 'WithCounterMeta']
+           'setattrs', 'attrrepr', 'at_', 'val_atpath', 'has_key', 'has_path', 'vals_atpath', 'vals_at', 'deep_in',
+           'pops_', 'pops_values_', 'gets', 'update_', 'bundle_path', 'Kounter', 'simple_id', 'id_gen',
+           'WithCounterMeta']
 
 # %% ../nbs/00_basic.ipynb
 import importlib
@@ -81,11 +82,11 @@ def _flds(o, *args): return tuple(_ for _ in inspect.signature(o if isinstance(o
 
 # %% ../nbs/00_basic.ipynb
 @FC.delegates(FC.store_attr, but=['names', 'self'])  # type: ignore
-def Fields(*args, **kwargs):
+def Fields(*args, but:tuple[str, ...]=(), **kwargs):
     "Set annotated fields of `self` extracted from caller's locals; `*args` -> optional (None), `**kwargs` -> defaults"
     caller_locals =  sys._getframe(1).f_locals
     o = caller_locals['self']
-    fields = {name: caller_locals[name] for name in _flds(o) if name in caller_locals}
+    fields = {name: caller_locals[name] for name in _flds(o) if name in caller_locals and name not in but}
     fields = {**fields, **{k: None for k in args}, **kwargs}
     # hack to make `store_attr` work with empty dict/list
     proxy = FC.AttrDict(_=None)  
@@ -130,6 +131,13 @@ def setattrs(dest, src, flds=''):
     elif isinstance(src, dict): flds = src.keys()
     else: flds = (_ for _ in dir(src) if _[0] != '_')
     for fld in flds: s(dest, fld, g(src, fld))
+
+# %% ../nbs/00_basic.ipynb
+def attrrepr(o:object, ks:str):
+    "Return a string repr of `o` with attributes from comma-separated `ks` (suffix `+` forces inclusion, others only if truthy)."
+    kk = [k if k[-1]!='+' else k[:-1] for k in re.split(', *', ks) if k[-1]=='+' or bool(getattr(o, k))]
+    vv = ', '.join(k+'='+repr(getattr(o, k)) for k in kk)
+    return f"{type(o).__name__}({vv})"    
 
 # %% ../nbs/00_basic.ipynb
 _empty = Parameter.empty
