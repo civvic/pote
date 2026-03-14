@@ -22,7 +22,7 @@ Documentation = "https://civvic.github.io/pote"
 pote = "pote._modidx:d"
 
 [project.optional-dependencies]
-dev = ['notebook', 'jupyterlab', 'nbclassic', 'nbdev']
+dev = ['notebook', 'jupyterlab', 'nbclassic', 'nbdev', 'reorder-python-imports']
 
 [tool.setuptools.dynamic]
 version = {attr = "pote.__version__"}
