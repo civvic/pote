@@ -6,8 +6,8 @@
 __all__ = ['setup_dialog', 'solveit_version', 'in_dialog', 'get_caller_globals', 'get_msg_id', 'get_output', 'format_output',
            'set_var', 'find_var', 'get_tag', 'has_tag', 'find_tag', 'get_linked', 'link_msg', 'hydrate', 'waitpred',
            'waitpreda', 'next_dup', 'next_filename', 'gen_id', 'at_', 'setup_ns', 'info', 'add_info', 'summarize',
-           'get_tool_names', 'show_tool_names', 'mk_ns_toollist', 'add_tools_card', 'nb_path', 'dlg_module',
-           'dlg_export', 'get_dialog_link', 'ctxusage', 'empty_dialog_nb', 'find_symbol_msg', 'importdlg']
+           'get_tool_names', 'show_tool_names', 'mk_ns_toollist', 'add_tools_card', 'is_exported', 'nb_path',
+           'dlg_module', 'dlg_export', 'get_dialog_link', 'ctxusage', 'empty_dialog_nb', 'find_symbol_msg', 'importdlg']
 
 # %% ../nbs/00_dutil.ipynb #e72f67fd
 import os, re, sys, inspect, uuid, json, time
@@ -18,14 +18,15 @@ from typing import Any, Mapping
 from IPython import get_ipython
 from anyio import sleep
 from anyio.from_thread import start_blocking_portal
+from nbdev.process import extract_directives
 from fastcore.imports import in_ipython
+from fastcore.foundation import AttrDict
 from fastcore.meta import delegates
 from fastcore.xtras import is_listy
 import dialoghelper
 from dialoghelper.core import add_msg, is_usable_tool, read_msg, update_msg, find_msgs, msg_idx, run_msg, toggle_header, ast_py, find_dname
 from toolslm.funccall import get_schema, resolve_nm
 from fastgit import Git
-
 
 # %% ../nbs/00_dutil.ipynb #6389d58d
 def solveit_version():
@@ -314,6 +315,14 @@ async def add_tools_card(ns:Mapping|str=None, **kwargs):
     mod2tool = get_tool_names(ns, **kwargs)
     content = '\n\n'.join(f"## {mod}\n\n{mk_ns_toollist(ns, tools)}" for mod,tools in mod2tool.items())
     await link_msg(content)
+
+# %% ../nbs/00_dutil.ipynb #9b570c54
+_exports = {'exporti', 'exports', 'export'}
+
+# %% ../nbs/00_dutil.ipynb #adad19c4
+def is_exported(msg):
+    return msg.is_exported or bool(
+        extract_directives(AttrDict(source=msg.content), remove=False).keys() & _exports)
 
 # %% ../nbs/00_dutil.ipynb #5a13b503
 def nb_path(dname:str=''): return (Path.home()/(dname or find_dname()).removeprefix('/')).with_suffix('.ipynb')
