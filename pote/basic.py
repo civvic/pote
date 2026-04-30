@@ -62,18 +62,20 @@ class AD(dict[str, _VT]):
     def copy(self) -> Self: return type(self)(**self)
 
 # %% ../nbs/00_basic.ipynb #8232f3b3
-def is_listy(x):
-    return isinstance(x, Iterable) and not isinstance(x, (bytes, str))
+def is_listy(x, exclude=None):
+    "Return True if x is iterable but not a string or bytes, with optional type exclusions."
+    return isinstance(x, Iterable) and not isinstance(x, (bytes, str)) and not bool(exclude and isinstance(x, exclude))
 
-def is_listy_type(x):
-    return issubclass(x, Iterable) and not issubclass(x, (bytes, str))
+def is_listy_type(x, exclude=None):
+    "Return True if x is an iterable type but not str or bytes, with optional type exclusions."
+    return issubclass(x, Iterable) and not issubclass(x, (bytes, str)) and not bool(exclude and issubclass(x, exclude))
 
 # %% ../nbs/00_basic.ipynb #fb819786
-def flatten(o):
+def flatten(o, exclude=None):
     "Concatenate all collections and items as a generator"
     for item in o:
-        if not is_listy(item): yield item; continue
-        try: yield from flatten(item)
+        if not is_listy(item, exclude): yield item; continue
+        try: yield from flatten(item, exclude)
         except TypeError: yield item
 
 # %% ../nbs/00_basic.ipynb #464af4a4
@@ -95,6 +97,7 @@ def Fields(*args, **kwargs):
 
 # %% ../nbs/00_basic.ipynb #870ef4c6
 def shorten(x:Any, mode:Literal['l', 'r', 'c']='l', limit=40, trunc='…', empty='') -> str:
+    "Truncate string `x` to `limit` chars from the left, right, or center, with a `trunc` marker."
     if len(s := str(x)) > limit:
         l, m, r = (
             (empty, trunc, s[-limit:]) if mode == 'l' else 
@@ -105,8 +108,8 @@ def shorten(x:Any, mode:Literal['l', 'r', 'c']='l', limit=40, trunc='…', empty
     return s
 
 def shortens(xs:Iterable[Any], mode:Literal['l', 'r', 'c']='l', limit=40, trunc='…', empty=''):
+    "Yield truncated strings from `xs`, each shortened to `limit` chars."
     for x in xs: yield shorten(x, mode, limit, trunc, empty)
-
 
 # %% ../nbs/00_basic.ipynb #c2ea95fe
 _FuncItem: TypeAlias = Callable | Sequence['_FuncItem']
