@@ -155,6 +155,7 @@ _docs
 _meta
 .cursor/**
 _testbed/**
+**/*_dup*.*
 
 .specstory
 .cursorindexingignore
