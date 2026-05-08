@@ -230,21 +230,22 @@ async def setup_ns(ns=None, **kwargs):
 
 setup_dialog = setup_ns
 
-# %% ../nbs/00_dutil.ipynb #64bf2039
-def info():
+# %% ../nbs/00_dutil.ipynb #fe59344e
+def info(dname:str='', json:bool=False):
     "Returns information about the dialog"
-    ver = f"Solveit version: **{solveit_version()}**  \ndialoghelper version: **{dialoghelper.__version__}**  "
-    gs = ''
-    g = Git('.')
+    br, chngs, ver, dhv = (), (), solveit_version(), dialoghelper.__version__
+    g = Git('.' if not dname else (Path.home()/find_dname(dname).lstrip('/')).parent) 
     if g.exists:
         br, *chngs = g('status', '-bs')
-        gs = f"\ngit branch: **{br.split()[-1]}**  \ngit changes: {chngs}"
-    return ver + gs
+        br = br.split()[1].split('...')[0]
+    return ({'Solveit': solveit_version(), 'dialoghelper': dialoghelper.__version__, 'git branch': br, 'git changes': chngs}
+        if json else 
+        f"Solveit: **v. {ver}**  \ndialoghelper: **v. {dhv}**  " + f"\ngit branch: **{br}**  \ngit changes: {chngs}" if br else '')
 
 # %% ../nbs/00_dutil.ipynb #e2bc850b
-async def add_info(msgid:str=''):
+async def add_info(msgid:str='', dname:str=''):
     "Add a message with information about the dialog"
-    return await link_msg(info(), id=msgid)
+    return await link_msg(info(dname), id=msgid)
 
 # %% ../nbs/00_dutil.ipynb #8e88bb43
 def summarize(target, context): pass
