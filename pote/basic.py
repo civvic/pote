@@ -8,7 +8,8 @@ from __future__ import annotations
 # %% auto #0
 __all__ = ['empty', 'val_at', 'is_empty', 'AD', 'is_listy', 'is_listy_type', 'flatten', 'Fields', 'shorten', 'shortens', 'Runner',
            'setattrs', 'at_', 'val_atpath', 'has_key', 'has_path', 'vals_atpath', 'vals_at', 'deep_in', 'pops_',
-           'pops_values_', 'gets', 'update_', 'bundle_path', 'Kounter', 'simple_id', 'id_gen', 'WithCounterMeta']
+           'pops_values_', 'gets', 'update_', 'bundle_path', 'usable_dir', 'first_usable_dir', 'Kounter', 'simple_id',
+           'id_gen', 'WithCounterMeta']
 
 # %% ../nbs/00_basic.ipynb #a10bfae7
 import importlib
@@ -289,6 +290,21 @@ def bundle_path(mod:str|ModuleType):
     "Return the path to the module's directory or current directory."
     if isinstance(mod, str): mod = importlib.import_module(mod)
     return Path(fn).parent if (fn := getattr(mod, '__file__', None)) else Path()
+
+# %% ../nbs/00_basic.ipynb #cff5a12e
+def usable_dir(p:Path) -> bool:
+    "Check whether `dir` is likely usable for local app data."
+    try: p.mkdir(parents=True, exist_ok=True)
+    except Exception: return False
+    return p.is_dir() and os.access(p, os.R_OK|os.W_OK|os.X_OK)
+
+def first_usable_dir(*ps) -> Path:
+    'Return first path in `ps` that is likely a usable dir in sandboxed envs.'
+    for p in ps:
+        try: p = Path(p).expanduser().resolve()
+        except Exception: continue
+        if usable_dir(p): return p
+    raise FileNotFoundError("No usable directory found")
 
 # %% ../nbs/00_basic.ipynb #c07c02be
 class Kounter:
