@@ -4,14 +4,14 @@
 
 # %% auto #0
 __all__ = ['ESC', 'sgr', 'color_table', 'color_codes', 'add_style', 'list2lis', 'dict2uls', 'dict2dtls', 'DetailsColl',
-           'DetailsJSON']
+           'DetailsJSON', 'DfTable']
 
 # %% ../nbs/02_display.ipynb #5c7f7c5b
-from pathlib import Path
 from typing import Mapping, Sequence
-from fastcore.foundation import AttrDict, patch
+import pandas as pd
 from fastcore.xml import FT
-from fasthtml.components import Div, Details, Summary, Ul, Li, Span, show
+from fasthtml.common import camel2words, snake2camel
+from fasthtml.components import Div, Details, Summary, Ul, Li, Span, show, Td, Th, Table, Thead, Tr, Tbody
 from fasthtml.xtend import Style
 from dialoghelper.core import add_html
 from .common import is_listy, flatten, shorten
@@ -56,25 +56,6 @@ def color_codes():
 def add_style(css:str):
     _stl = Div(Style(css), hx_swap_oob='beforeend:#dialog-container')
     add_html(_stl)
-
-# %% ../nbs/02_display.ipynb #e1fc832d
-def it2lbl(it, nm=''):
-    # return ((nm, it) if nm else (it,)) if isinstance(it, FT) else (str(it),)
-    it = it if isinstance(it, FT) else str(it)
-    return (nm, it) if nm else (it,)
-
-# %% ../nbs/02_display.ipynb #d3c3b311
-def list2lis(its:list, dproc, eproc=it2lbl) -> list[Li]:
-    return flatten([
-        [Li(data_it=True)(*eproc(ul,k)) for k,ul in dproc(it).items()] if isinstance(it, dict) else
-        Li(data_it=True)(*eproc(it))
-        for it in its], (FT,))
-
-def dict2uls(d:dict, eproc=it2lbl) -> dict[Ul]:
-    return {
-        k:Ul(data_coll_name=k)(*list2lis(v if is_listy(v) else [v], dict2uls, eproc)) 
-        for k,v in d.items()
-    }
 
 # %% ../nbs/02_display.ipynb #82de485a
 def it2lbl(it, nm=''):
@@ -183,3 +164,36 @@ class DetailsJSON(dict):
 
 # %% ../nbs/02_display.ipynb #1203f111
 DetailsJSON.setup_style()
+
+# %% ../nbs/02_display.ipynb #91e320ce
+def DfTable(df=None, fmt_fns=(), col_cls=(), sz="xs", cls="", **kw):
+    fmt_fns = dict(fmt_fns)
+    col_cls = dict(col_cls)
+
+    def render(df):
+        def snake2words(o): return camel2words(snake2camel(o))    
+        def to_cls(n): return "tabular-nums text-right" if pd.api.types.is_any_real_numeric_dtype(df[n].dtype) else "text-left"
+
+        def fmt_fn(n):
+            t = df[n].dtype
+            def blank_na(f): return lambda x: "" if pd.isna(x) else f(x)
+            if pd.api.types.is_integer_dtype(t): return blank_na(lambda x:f"{x:,.0f}")
+            if pd.api.types.is_any_real_numeric_dtype(t): return blank_na(lambda x:f"{x:,.2f}")
+            if pd.api.types.is_datetime64_any_dtype(t): return blank_na(lambda x:pd.Timestamp(x).strftime("%b %d, %Y"))
+            if pd.api.types.is_bool_dtype(t): return blank_na(lambda x: "Yes" if x else "No")
+            return blank_na(lambda x: str(x).strip())
+
+        def mk_td(name, val):
+            return Td(cls=f"{to_cls(name)} {col_cls.get(name, '')}".strip())(fmt_fns.get(name, fmt_fn(name))(val))
+
+        def mk_th(o): return Th(cls=f"{to_cls(o)} whitespace-nowrap")(snake2words(o).title())
+
+        tbl_cls = f"{cls} table table-{sz} table-zebra table-pin-cols table-pin-rows"
+
+        return Table(cls=tbl_cls, **kw)(
+            Thead(Tr(*map(mk_th, df.dtypes.to_dict()))),
+            Tbody(*df.apply(lambda o:Tr(*[mk_td(n,v) for n,v in zip(o.index, o)]), axis=1).to_list()),
+        )
+        
+
+    return render if df is None else render(df)
