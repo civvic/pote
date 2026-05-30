@@ -57,10 +57,10 @@ threejs_hdrs = (
 # %% ../nbs/02_server.ipynb #44f67a71
 def get_preview(app): return partial(HTMX, app=app)
 
-def ensure_server(srv=None, port=8000, hdrs=None):
+def ensure_server(srv=None, port=8000, app=None, hdrs=None):
     if not srv: srv,_ = find_server(port)
     if not srv:
-        app = FastHTML(hdrs=hdrs or daisyui_hdrs)
+        app = app if app else FastHTML(hdrs=hdrs or daisyui_hdrs)
         srv = JupyUvi(app)
     else: app = srv.app
     return app, app.route, srv, get_preview(app)
