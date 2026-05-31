@@ -22,7 +22,7 @@ def kill_port(port): subprocess.run(f"lsof -ti:{port} | xargs -r kill -9", shell
 # %% ../nbs/02_server.ipynb #fd28a288
 def is_serving(srv, timeout=1):
     "Check if a JupyUvi instance is live and serving requests"
-    if not (srv and srv.server and srv.server.started and not srv.server.should_exit and not is_port_free(srv.port)): return False
+    if not (srv and srv.server and srv.server.started and not srv.server.should_exit and not is_port_free(srv.port, srv.host)): return False
     try:
         import httpx
         return httpx.get(f"http://localhost:{srv.port}/", timeout=timeout).status_code < 500
