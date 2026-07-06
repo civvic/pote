@@ -36,4 +36,5 @@ version = {attr = 'pote.__version__'}
 include = ['pote']
 
 [tool.nbdev]
-allowed_cell_metadata_keys = ['solveit_ai']
+allowed_metadata_keys = ['solveit']
+allowed_cell_metadata_keys = ['solveit_ai', 'pinned', 'skipped', 'heading_collapsed', 'collapsed', 'bookmark', 'hidden']
