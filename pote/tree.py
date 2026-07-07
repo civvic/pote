@@ -8,9 +8,9 @@ Docs: https://civvic.github.io/potetree.html.md"""
 __all__ = ['exclude', 'tree_basic_css', 'is_tree', 'search', 'FileMeta', 'TreeNode', 'child', 'parent_at', 'rename', 'remove',
            'insert', 'update', 'move', 'changed', 'TreeWalk', 'visit', 'transform', 'filter_nodes', 'prune',
            'map_nodes', 'map_values', 'map_names', 'map_meta', 'paths', 'values', 'items', 'nodes', 'leaves',
-           'branches', 'height', 'count', 'reduce_nodes', 'find', 'find_all', 'find_values', 'from_dict', 'to_dict',
-           'pprint', 'validate', 'keep_dirs', 'fold', 'details_tree', 'show_tree', 'path_nm', 'show_path', 'dlg_href',
-           'dlg_leaf', 'file_href', 'solveit_leaf', 'folder_href', 'solveit_node']
+           'branches', 'height', 'count', 'reduce_nodes', 'find', 'find_all', 'find_values', 'tn_label', 'from_dict',
+           'to_dict', 'pprint', 'validate', 'keep_dirs', 'fold', 'details_tree', 'show_tree', 'path_nm', 'show_path',
+           'dlg_href', 'dlg_leaf', 'file_href', 'solveit_leaf', 'folder_href', 'solveit_node']
 
 # %% ../nbs/01_tree.ipynb #5c7f7c5b
 from copy import deepcopy
@@ -305,10 +305,10 @@ def find_values(root: TreeNode, pred: Callable):
     return find_all(root, lambda n: pred(n.value))
 
 # %% ../nbs/01_tree.ipynb #4a148955
-def _label(n, empty='root'): return n.meta.get('label', n.name or empty)
+def tn_label(n: TreeNode, empty='root'): return n.meta.get('label', n.name or empty)
 
 # %% ../nbs/01_tree.ipynb #a308708e
-def _open_set(root: TreeNode, opened, nm=_label):
+def _open_set(root: TreeNode, opened, nm=tn_label):
     res = set()
     def _want(p, n):
         if opened is None: return False
@@ -345,7 +345,7 @@ def to_dict(root: TreeNode):
     return {o.name: _val(o) for o in root.children}
 
 # %% ../nbs/01_tree.ipynb #56f33545
-def _display(n, show_values=False, empty='root'): return n.value if show_values and n.value is not None else _label(n, empty)
+def _display(n, show_values=False, empty='root'): return n.value if show_values and n.value is not None else tn_label(n, empty)
 
 def _print_indent(root: TreeNode, indent=2, color=True, empty_root='root', show_values=False):
     d,r = ('\033[34m','\033[0m') if color else ('','')
@@ -390,7 +390,7 @@ def keep_dirs(pred):
 
 # %% ../nbs/01_tree.ipynb #d4ad66b9
 @patch
-def show(self:TreeNode, opened=None, open_parent=False, nm=_label, **kwargs):
+def show(self:TreeNode, opened=None, open_parent=False, nm=tn_label, **kwargs):
     if open_parent: opened = _open_set(self, opened, nm)
     ft_show(details_tree(self, nm=nm, opened=opened, **kwargs))
 
@@ -409,7 +409,7 @@ def fold(root: TreeNode, f: Callable):
     return out
 
 # %% ../nbs/01_tree.ipynb #18245a4f
-def details_tree(root: TreeNode, nm=_label, opened=None, root_name='', hide_root=True, show_values=False, node_html=None, leaf_html=None, cls='tree'):
+def details_tree(root: TreeNode, nm=tn_label, opened=None, root_name='', hide_root=True, show_values=False, node_html=None, leaf_html=None, cls='tree'):
     "Build details/summary/ul/li HTML from TreeNode"
     def _open(p,n,c):
         if c.depth==0: return True
@@ -427,7 +427,7 @@ def details_tree(root: TreeNode, nm=_label, opened=None, root_name='', hide_root
     return fold(root, _f)
 
 # %% ../nbs/01_tree.ipynb #de4ba704
-def show_tree(root: TreeNode, opened=None, open_parent=False, nm=_label, **kwargs):
+def show_tree(root: TreeNode, opened=None, open_parent=False, nm=tn_label, **kwargs):
     "Show tree as HTML"
     if open_parent: opened = _open_set(root, opened, nm)
     ft_show(details_tree(root, nm=nm, opened=opened, **kwargs))
@@ -455,7 +455,7 @@ def tree(self:Path, file_type:str=None, file_exts:list=None, exclude:list=None, 
 def path_nm(n, slash_dirs=True):
     p = n.value
     if isinstance(p, Path): return f"{p.name}/" if slash_dirs and n.meta.get('kind')=='dir' else p.name
-    return _label(n)
+    return tn_label(n)
 
 # %% ../nbs/01_tree.ipynb #6286d2fd
 def show_path(path='.', file_type=None, file_exts=None, exclude=None, hidden=False, max_level=None, opened=None, open_parent=False, open_dirs=False, slash_dirs=True, **kwargs):
