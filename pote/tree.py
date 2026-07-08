@@ -8,22 +8,24 @@ Docs: https://civvic.github.io/potetree.html.md"""
 __all__ = ['exclude', 'tree_basic_css', 'is_tree', 'search', 'FileMeta', 'TreeNode', 'child', 'parent_at', 'rename', 'remove',
            'insert', 'update', 'move', 'changed', 'TreeWalk', 'visit', 'transform', 'filter_nodes', 'prune',
            'map_nodes', 'map_values', 'map_names', 'map_meta', 'paths', 'values', 'items', 'nodes', 'leaves',
-           'branches', 'height', 'count', 'reduce_nodes', 'find', 'find_all', 'find_values', 'tn_label', 'from_dict',
-           'to_dict', 'pprint', 'validate', 'keep_dirs', 'fold', 'details_tree', 'show_tree', 'path_nm', 'show_path',
-           'dlg_href', 'dlg_leaf', 'file_href', 'solveit_leaf', 'folder_href', 'solveit_node']
+           'branches', 'height', 'count', 'reduce_nodes', 'find', 'find_all', 'find_values', 'nm_label', 'nm_value',
+           'from_dict', 'to_dict', 'pprint', 'validate', 'keep_dirs', 'fold', 'details_tree', 'show_tree', 'path_nm',
+           'show_path', 'dlg_href', 'dlg_leaf', 'file_href', 'solveit_leaf', 'folder_href', 'solveit_node']
 
 # %% ../nbs/01_tree.ipynb #5c7f7c5b
 from copy import deepcopy
+from functools import partial
 from operator import attrgetter
 from pathlib import Path
 from typing import Mapping, Callable
 from urllib.parse import quote
 
 from fastcore.foundation import L, AttrDict, patch, AttrDict as AD
+from fastcore.meta import delegates
 from fasthtml.components import Div, Details, Summary, Ul, Li, A
 from fasthtml.components import show as ft_show
 
-from .basic import is_listy
+from .basic import is_listy, shorten
 from .callback import CBs, HasCallbacks
 
 
@@ -91,13 +93,11 @@ class TreeNode:
     def __contains__(self, name): return any(o.name==name for o in self.children)
     def __eq__(self, o): return isinstance(o, TreeNode) and self.name==o.name and self.value==o.value and self.children==o.children and self.meta==o.meta
     def __repr__(self):
-        a = ', '.join(filter(None, (
-                f"{self.name!r}",
-                '' if not self.children else f"{self.children!r}", 
-                '' if self.value is None else f"{self.value!r}", 
-                '' if not self.meta else f"**{dict(self.meta)!r}",
-            )))
-        return f"TreeNode({a})"
+        a = [repr(self.name)]
+        if self.children: a.append(repr(self.children))
+        if self.value is not None: a.append(f"value={self.value!r}")
+        if self.meta: a.append(f"**{dict(self.meta)!r}")
+        return f"TreeNode({', '.join(a)})"
 
     def is_leaf(self): return not self.children
 
@@ -305,10 +305,11 @@ def find_values(root: TreeNode, pred: Callable):
     return find_all(root, lambda n: pred(n.value))
 
 # %% ../nbs/01_tree.ipynb #4a148955
-def tn_label(n: TreeNode, empty='root'): return n.meta.get('label', n.name or empty)
+def nm_label(n: TreeNode, empty='root'): return n.meta.get('label', n.name or empty)
+def nm_value(n: TreeNode, empty='root'): return n.meta.get('label', shorten(n.value, 'r', limit=80) if n.value is not None else n.name or empty)
 
 # %% ../nbs/01_tree.ipynb #a308708e
-def _open_set(root: TreeNode, opened, nm=tn_label):
+def _open_set(root: TreeNode, opened, nm=nm_label):
     res = set()
     def _want(p, n):
         if opened is None: return False
@@ -320,10 +321,6 @@ def _open_set(root: TreeNode, opened, nm=tn_label):
             for i in range(len(parts)+1): res.add('/' + '/'.join(parts[:i]) if i else '/')
     visit(root, on_node_pre=_mark)
     return res
-
-# %% ../nbs/01_tree.ipynb #33d5a5d8
-@patch
-def to_html(self:TreeNode, **kwargs): return details_tree(self, **kwargs)
 
 # %% ../nbs/01_tree.ipynb #f8e7ab98
 def from_dict(d: Mapping, root='') -> TreeNode:
@@ -344,24 +341,24 @@ def to_dict(root: TreeNode):
         return {o.name: _val(o) for o in n.children}
     return {o.name: _val(o) for o in root.children}
 
-# %% ../nbs/01_tree.ipynb #56f33545
-def _display(n, show_values=False, empty='root'): return n.value if show_values and n.value is not None else tn_label(n, empty)
-
-def _print_indent(root: TreeNode, indent=2, color=True, empty_root='root', show_values=False):
+# %% ../nbs/01_tree.ipynb #f2610a22
+def _print_indent(root: TreeNode, indent=2, color=True, nm=None, empty_root='root'):
+    nm = nm or partial(nm_value, empty=empty_root)
     d,r = ('\033[34m','\033[0m') if color else ('','')
-    visit(root, on_node_pre=lambda ctx,p,n,c: print(' '*indent*c.depth + d + str(_display(n, show_values, empty_root)) + r))
+    visit(root, on_node_pre=lambda ctx,p,n,c: print(' '*indent*c.depth + d + str(nm(n)) + r))
 
-def _print_tree(root: TreeNode, color=True, empty_root='root', show_values=False):
+def _print_tree(root: TreeNode, color=True, nm=None, empty_root='root'):
+    nm = nm or partial(nm_value, empty=empty_root)
     d,r,g = ('\033[34m','\033[0m','\033[38;5;7m') if color else ('','','')
     last = {}
     def _pfx(c): return ''.join('    ' if last.get(i) else '│   ' for i in range(1, c.depth)) + ('└── ' if c.is_last else '├── ')*bool(c.depth)
-    def _pre(ctx,p,n,c): last[c.depth] = c.is_last; print(g + _pfx(c) + r + d + str(_display(n, show_values, empty_root)) + r)
+    def _pre(ctx,p,n,c): last[c.depth] = c.is_last; print(g + _pfx(c) + r + d + str(nm(n)) + r)
     visit(root, on_node_pre=_pre)
 
-def pprint(root: TreeNode, style='tree', indent=2, color=True, empty_root='root', show_values=False):
+def pprint(root: TreeNode, style='tree', indent=2, color=True, nm=None, empty_root='root'):
     "Pretty print a tree"
-    if style == 'tree': return _print_tree(root, color, empty_root, show_values)
-    return _print_indent(root, indent, color, empty_root, show_values)
+    if style == 'tree': return _print_tree(root, color, nm, empty_root)
+    return _print_indent(root, indent, color, nm, empty_root)
 
 # %% ../nbs/01_tree.ipynb #bafebd78
 def validate(root: TreeNode):
@@ -374,25 +371,10 @@ def validate(root: TreeNode):
     for o in root.children: validate(o)
     return root
 
-# %% ../nbs/01_tree.ipynb #8057636c
-@patch
-def __repr__(self:TreeNode):
-    a = [repr(self.name)]
-    if self.children: a.append(repr(self.children))
-    if self.value is not None: a.append(f"value={self.value!r}")
-    if self.meta: a.append(f"**{dict(self.meta)!r}")
-    return f"TreeNode({', '.join(a)})"
-
 # %% ../nbs/01_tree.ipynb #4c3d6d15
 def keep_dirs(pred):
     "Keep directories plus nodes matching pred"
     return lambda n: n.meta.get('kind')=='dir' or pred(n)
-
-# %% ../nbs/01_tree.ipynb #d4ad66b9
-@patch
-def show(self:TreeNode, opened=None, open_parent=False, nm=tn_label, **kwargs):
-    if open_parent: opened = _open_set(self, opened, nm)
-    ft_show(details_tree(self, nm=nm, opened=opened, **kwargs))
 
 # %% ../nbs/01_tree.ipynb #dd139a2f
 def fold(root: TreeNode, f: Callable):
@@ -409,14 +391,14 @@ def fold(root: TreeNode, f: Callable):
     return out
 
 # %% ../nbs/01_tree.ipynb #18245a4f
-def details_tree(root: TreeNode, nm=tn_label, opened=None, root_name='', hide_root=True, show_values=False, node_html=None, leaf_html=None, cls='tree'):
+def details_tree(root: TreeNode, nm=nm_value, opened=None, root_name='', hide_root=True, node_html=None, leaf_html=None, cls='tree'):
     "Build details/summary/ul/li HTML from TreeNode"
     def _open(p,n,c):
         if c.depth==0: return True
         if opened is None: return False
         if callable(opened): return opened(p,n)
         return p in opened or n.name in opened or nm(n) in opened
-    def _leaf(p,n): return leaf_html(p,n) if leaf_html else (n.value if show_values and n.value is not None else nm(n))
+    def _leaf(p,n): return leaf_html(p,n) if leaf_html else nm(n)
     def _summary(p,n): return node_html(p,n) if node_html else nm(n)
     def _f(p,n,children,c):
         is_branch = bool(n.children) or n.meta.get('kind')=='dir'
@@ -426,8 +408,21 @@ def details_tree(root: TreeNode, nm=tn_label, opened=None, root_name='', hide_ro
         return Li(Details(Summary(_summary(p,n)), Ul(*children, data_coll_name=n.name), open=_open(p,n,c)), data_it=True)
     return fold(root, _f)
 
-# %% ../nbs/01_tree.ipynb #de4ba704
-def show_tree(root: TreeNode, opened=None, open_parent=False, nm=tn_label, **kwargs):
+# %% ../nbs/01_tree.ipynb #ad51b228
+@patch
+@delegates(details_tree)
+def to_html(self:TreeNode, **kwargs): return details_tree(self, **kwargs)
+
+# %% ../nbs/01_tree.ipynb #de2a7229
+@patch
+@delegates(details_tree)
+def show(self:TreeNode, opened=None, open_parent=False, nm=nm_value, **kwargs):
+    if open_parent: opened = _open_set(self, opened, nm)
+    ft_show(details_tree(self, nm=nm, opened=opened, **kwargs))
+
+# %% ../nbs/01_tree.ipynb #b4f486a3
+@delegates(details_tree)
+def show_tree(root: TreeNode, opened=None, open_parent=False, nm=nm_value, **kwargs):
     "Show tree as HTML"
     if open_parent: opened = _open_set(root, opened, nm)
     ft_show(details_tree(root, nm=nm, opened=opened, **kwargs))
@@ -455,14 +450,15 @@ def tree(self:Path, file_type:str=None, file_exts:list=None, exclude:list=None, 
 def path_nm(n, slash_dirs=True):
     p = n.value
     if isinstance(p, Path): return f"{p.name}/" if slash_dirs and n.meta.get('kind')=='dir' else p.name
-    return tn_label(n)
+    return nm_label(n)
 
 # %% ../nbs/01_tree.ipynb #6286d2fd
 def show_path(path='.', file_type=None, file_exts=None, exclude=None, hidden=False, max_level=None, opened=None, open_parent=False, open_dirs=False, slash_dirs=True, **kwargs):
     "Show a filesystem path as a tree"
     nm = lambda n: path_nm(n, slash_dirs)
     if open_dirs: opened = lambda p,n: n.meta.get('kind')=='dir'
-    Path(path).tree(file_type=file_type, file_exts=file_exts, exclude=exclude, hidden=hidden, max_level=max_level).show(nm=nm, opened=opened, open_parent=open_parent, **kwargs)
+    Path(path).tree(file_type=file_type, file_exts=file_exts, exclude=exclude, hidden=hidden, max_level=max_level)\
+              .show(nm=nm, opened=opened, open_parent=open_parent, **kwargs)
 
 # %% ../nbs/01_tree.ipynb #750d6cd5
 base = Path.home()
