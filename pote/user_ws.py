@@ -4,7 +4,7 @@ The browser helper in `_user_ws_js` is injected once with `setup_user_ws()`, whi
 
 The JS helper tracks websocket initiator element IDs in a `Set`, stores each HTMX socket wrapper on its DOM element as `el._ws`, and filters HTMX websocket events by `e.target.id`. Matching `htmx:wsOpen`, `htmx:wsClose`, and `htmx:wsError` events are stopped in the capture phase so Solveit’s own global websocket monitor does not mistake user websocket lifecycle events for Solveit backend failures.
 
-`UserWS` provides Solveit-safe user HTMX websockets.
+`UserWS` provides Solveit-safe user HTMX websockets. One `UserWS` instance can manage many independent websocket initiators, keyed by `wid`.
 
 Typical flow:
 
@@ -180,7 +180,7 @@ async def setup_user_ws():
 
 # %% ../nbs/02_user_ws.ipynb #c1dfecc7
 class UserWS:
-    "Manage Solveit-safe HTMX websocket initiators and server send handles"
+    "Manage many Solveit-safe HTMX websocket initiators and server send handles keyed by `wid`"
     def __init__(self, app, srv): store_attr(); self.sends,self.routes = {},set()
 
     def url(self, path):
