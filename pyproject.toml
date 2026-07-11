@@ -35,6 +35,9 @@ version = {attr = 'pote.__version__'}
 [tool.setuptools.packages.find]
 include = ['pote']
 
+[project.entry-points.pyskills]
+"pote.user_ws" = "pote.user_ws"
+
 [tool.nbdev]
 allowed_metadata_keys = ['solveit']
 allowed_cell_metadata_keys = ['solveit_ai', 'pinned', 'skipped', 'heading_collapsed', 'collapsed', 'bookmark', 'hidden']
