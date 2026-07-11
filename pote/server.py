@@ -62,7 +62,7 @@ def get_preview(app): return partial(HTMX, app=app)
 def ensure_server(srv=None, port=8000, app=None, hdrs=None):
     if not srv: srv,_ = find_server(port)
     if not srv:
-        app = app if app else FastHTML(hdrs=hdrs or daisyui_hdrs)
+        app = app if app else FastHTML(hdrs=hdrs if hdrs is not None else daisyui_hdrs)
         srv = JupyUvi(app)
     else: app = srv.app
     return app, app.route, srv, get_preview(app)
