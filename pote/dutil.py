@@ -6,12 +6,12 @@ Docs: https://civvic.github.io/potedutil.html.md"""
 
 # %% auto #0
 __all__ = ['setup_dialog', 'solveit_version', 'in_dialog', 'get_caller_globals', 'count_tokens', 'ctxusage', 'set_var',
-           'find_var', 'get_tag', 'has_tag', 'find_tag', 'get_linked', 'link_msg', 'hydrate', 'waitpred', 'waitpreda',
+           'find_var', 'get_tag', 'has_tag', 'find_tag', 'get_linked', 'link_msg', 'hydrate', 'wait_for', 'wait_for_a',
            'next_dup', 'next_filename', 'gen_id', 'at_', 'setup_ns', 'add_style', 'info', 'add_info', 'summarize',
            'get_tool_names', 'show_tool_names', 'mk_ns_toollist', 'add_tools_card']
 
 # %% ../nbs/00_dutil.ipynb #1e28a183
-import os, re, sys, inspect, uuid, time
+import asyncio, os, re, sys, inspect, uuid, time
 from collections import defaultdict
 from inspect import Parameter, currentframe
 from pathlib import Path
@@ -160,7 +160,7 @@ async def hydrate():
     return linked
 
 # %% ../nbs/00_dutil.ipynb #b9ae31c1
-def waitpred(pred, timeout=0.5, interval=0.05):
+def wait_for(pred, timeout=0.5, interval=0.05):
     "Wait until `pred` is True or `timeout` is reached without blocking the kernel"
     async def _wait():
         start = time.time()
@@ -168,14 +168,13 @@ def waitpred(pred, timeout=0.5, interval=0.05):
         return pred()
     with start_blocking_portal() as portal: return portal.call(_wait)
 
-# %% ../nbs/00_dutil.ipynb #c334d7b2
-async def waitpreda(pred, timeout=0.5, interval=0.05):
+# %% ../nbs/00_dutil.ipynb #66d58c76
+async def wait_for_a(pred, timeout=2, sleep=0.01):
     "Async wait until `pred` is True or `timeout` is reached without blocking the kernel"
-    t0 = time.time()
-    while not await pred():
-        if time.time() - t0 > timeout: return False
-        await sleep(0.1)
-    return True
+    t = asyncio.get_event_loop().time()
+    while not pred():
+        if asyncio.get_event_loop().time()-t > timeout: raise TimeoutError()
+        await asyncio.sleep(sleep)
 
 # %% ../nbs/00_dutil.ipynb #cc011438
 def next_dup(fp, marker='_dup'):
