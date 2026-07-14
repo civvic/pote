@@ -7,7 +7,7 @@ __all__ = ['daisyui_hdrs', 'threejs_hdrs', 'kill_port', 'is_serving', 'wrap_endp
            'stop_server', 'setup_uvi_logging', 'local_server']
 
 # %% ../nbs/02_server.ipynb #92031bb1
-import asyncio, logging, subprocess
+import asyncio, logging, subprocess, inspect
 from contextlib import asynccontextmanager
 from datetime import datetime
 from functools import partial
@@ -76,6 +76,9 @@ def stop_server(port=8000):
 # %% ../nbs/02_server.ipynb #3e47ca82
 def log(msg, *args, **kwargs): print(f"[{datetime.now():%H:%M:%S}] {msg}", flush=True)
 
+async def maybe_await(o):
+    if inspect.isawaitable(o): await o
+
 # %% ../nbs/02_server.ipynb #d544286b
 class LoggerHandler(logging.Handler):
     def __init__(self, log): self.log = log; super().__init__()
@@ -105,10 +108,10 @@ async def local_server(app=None, port=8000, after_start=None, before_stop=None, 
         if not quiet:
             try: print(f">>> started: {srv.server.started}\n{shell_ret(f'lsof -i :{port}')}")
             except Exception as e: print(f">>> server startup failed: {e}")
-    if after_start: await after_start(srv) if asyncio.iscoroutinefunction(after_start) else after_start(srv)
+    if after_start: await maybe_await(after_start(srv))
     try: yield srv
     finally:
-        if before_stop: await before_stop(srv) if asyncio.iscoroutinefunction(before_stop) else before_stop(srv)
+        if before_stop: await maybe_await(before_stop(srv))
         if not server: return
         srv.server.should_exit = True
         deadline = (loop := asyncio.get_running_loop()).time() + timeout
