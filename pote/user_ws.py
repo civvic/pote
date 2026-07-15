@@ -11,7 +11,7 @@ Typical flow:
 1. `await setup_user_ws()` once per browser session
 2. `uws = UserWS(app, srv)`
 3. define a FastHTML websocket handler
-4. `wid,path = await uws.start('my-ws', '/ws', handler)`
+4. `wid = await uws.start('/ws', handler)`
 5. browser → Python: `await uws.send_client(wid, dict(msg='hi'))`
 6. Python → browser: `await uws.send(wid, Div('hello', id='target'))`
 7. cleanup before stopping the server: `await uws.stop(wid)`
@@ -37,7 +37,7 @@ async def _conn(send): print('connected')
 async def _disconn(send): print('disconnected')
 
 uws = UserWS(app, srv)
-wid,path = await uws.start('demo-ws', '/demo-ws', ws_demo, conn=_conn, disconn=_disconn)
+wid = await uws.start('/demo-ws', ws_demo, conn=_conn, disconn=_disconn)
 await uws.send_client(wid, dict(msg='world'))
 
 await uws.stop(wid)
@@ -57,6 +57,11 @@ from fastcore.meta import delegates
 from pyskills.core import allow
 from dialoghelper import add_scr_a, iife_a, js_eval_a
 from .dutil import wait_for_a
+from .basic import id_gen
+
+
+# %% ../nbs/03_user_ws.ipynb #21bceb0c
+_new_id = id_gen()
 
 # %% ../nbs/03_user_ws.ipynb #bc5f3896
 _user_ws_js = r'''
@@ -229,21 +234,24 @@ class UserWS:
             if disconn: await disconn(ws)
         return _disconn
 
-    def add(self, wid, path, handler, conn=None, disconn=None, **kwargs):
+    def add(self, path, handler, wid='', conn=None, disconn=None, **kwargs
+    ) -> str: # `wid`
         "Register websocket route once; optionally setup conn/disconn hooks"
+        wid = wid or _new_id('uws', '_')
         if wid not in self.routes:
             self.app.ws(path, conn=self._conn(wid, conn), disconn=self._disconn(wid, disconn), **kwargs)(handler)
             self.routes.add(wid)
-        return wid,path
+        return wid
 
     @delegates(add, keep=True)
-    async def start(self, wid, path, handler, wait=True, **kwargs):
+    async def start(self, path, handler, wid='', wait=True, **kwargs
+    )-> str: # `wid`
         "Register route, create browser initiator, and optionally wait for connection"
-        await self.stop(wid)
-        res = self.add(wid, path, handler, **kwargs)
+        if wid: await self.stop(wid)
+        wid = self.add(path, handler, wid, **kwargs)
         await self.create(wid, path)
         if wait: await self.wait(wid)
-        return res
+        return wid
 
     async def stop(self, wid):
         "Remove browser initiator and forget server send callable"

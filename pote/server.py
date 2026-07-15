@@ -59,12 +59,11 @@ threejs_hdrs = (
 # %% ../nbs/02_server.ipynb #44f67a71
 def get_preview(app): return partial(HTMX, app=app)
 
-def ensure_server(srv=None, port=8000, app=None, hdrs=None):
+def ensure_server(srv=None, port=8000, app=None, app_kw=None, **jupyuvi_kw):
     if not srv: srv,_ = find_server(port)
     if not srv:
-        app = app if app else FastHTML(hdrs=hdrs if hdrs is not None else daisyui_hdrs)
-        srv = JupyUvi(app)
-    else: app = srv.app
+        srv = JupyUvi(app or FastHTML(**(app_kw or {'hdrs': daisyui_hdrs})), port=port, **jupyuvi_kw)
+    app = srv.app
     return app, app.route, srv, get_preview(app)
 
 def stop_server(port=8000):
@@ -95,7 +94,7 @@ def setup_uvi_logging(_log=None):
 
 # %% ../nbs/02_server.ipynb #4759dac5
 @asynccontextmanager
-async def local_server(app=None, port=8000, after_start=None, before_stop=None, quiet=True, timeout=5, **jupyuvi_kw):
+async def local_server(app=None, port=8000, after_start=None, before_stop=None, quiet=True, timeout=5, app_kw=None, **jupyuvi_kw):
     "Yield a running JupyUvi server that can be used for testing; spins one up if needed, then cleanly tears it down afterwards"
     server = None
     if not is_port_free(port): 
@@ -103,7 +102,7 @@ async def local_server(app=None, port=8000, after_start=None, before_stop=None, 
         if srv is None: raise RuntimeError(f"Port {port} in use but no JupyUvi instance found in namespace")
         if not is_serving(srv): raise RuntimeError(f"Port {port} in use but JupyUvi server is not usable")
     else: 
-        server = srv = JupyUviAsync(app or FastHTML(), port=port, **jupyuvi_kw)
+        server = srv = JupyUviAsync(app or FastHTML(**(app_kw or {})), port=port, **jupyuvi_kw)
         await srv.start()
         if not quiet:
             try: print(f">>> started: {srv.server.started}\n{shell_ret(f'lsof -i :{port}')}")
