@@ -33,8 +33,11 @@ async def ws_demo(msg:str, send):
     if msg == '__init__': return
     await send(Div('Hello ' + msg, id='note2'))
 
+async def _conn(send): print('connected')
+async def _disconn(send): print('disconnected')
+
 uws = UserWS(app, srv)
-wid,path = await uws.start('demo-ws', '/demo-ws', ws_demo)
+wid,path = await uws.start('demo-ws', '/demo-ws', ws_demo, conn=_conn, disconn=_disconn)
 await uws.send_client(wid, dict(msg='world'))
 
 await uws.stop(wid)
@@ -50,6 +53,7 @@ __all__ = ['setup_user_ws', 'UserWS']
 # %% ../nbs/03_user_ws.ipynb #92031bb1
 import json, os
 from fastcore.foundation import store_attr
+from fastcore.meta import delegates
 from pyskills.core import allow
 from dialoghelper import add_scr_a, iife_a, js_eval_a
 from .dutil import wait_for_a
@@ -211,27 +215,32 @@ class UserWS:
         "Wait for websocket connection to be registered"
         return await wait_for_a(lambda: wid in self.sends)
 
-    def conn(self, wid):
+    def _conn(self, wid, conn):
         "Return FastHTML connect hook storing server send callable"
-        async def _conn(send): self.sends[wid] = send
+        async def _conn(send):
+            self.sends[wid] = send
+            if conn: await conn(send)
         return _conn
 
-    def disconn(self, wid):
+    def _disconn(self, wid, disconn):
         "Return FastHTML disconnect hook clearing server send callable"
-        async def _disconn(ws): self.sends.pop(wid, None)
+        async def _disconn(ws):
+            self.sends.pop(wid, None)
+            if disconn: await disconn(ws)
         return _disconn
 
-    def add(self, wid, path, handler):
-        "Register websocket route once"
+    def add(self, wid, path, handler, conn=None, disconn=None, **kwargs):
+        "Register websocket route once; optionally setup conn/disconn hooks"
         if wid not in self.routes:
-            self.app.ws(path, conn=self.conn(wid), disconn=self.disconn(wid))(handler)
+            self.app.ws(path, conn=self._conn(wid, conn), disconn=self._disconn(wid, disconn), **kwargs)(handler)
             self.routes.add(wid)
         return wid,path
 
-    async def start(self, wid, path, handler, wait=True):
+    @delegates(add, keep=True)
+    async def start(self, wid, path, handler, wait=True, **kwargs):
         "Register route, create browser initiator, and optionally wait for connection"
         await self.stop(wid)
-        res = self.add(wid, path, handler)
+        res = self.add(wid, path, handler, **kwargs)
         await self.create(wid, path)
         if wait: await self.wait(wid)
         return res
