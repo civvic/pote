@@ -18,20 +18,20 @@ Typical flow:
 
 `UserWS.start()` removes any existing browser initiator with the same id before recreating it, avoiding duplicate DOM elements and HTMX retry loops. Routes are registered only once per `UserWS` instance.
 
-Python handlers passed to `UserWS.start()` are normal FastHTML websocket handlers registered with `app.ws(...)`. They receive the usual parsed parameters plus `send`, and can send normal FastHTML responses. FastHTML websocket responses are always treated as OOB swaps. `UserWS` only manages connection setup, event isolation, and access to the server-side `send` callable; it does not change FastHTML websocket handler semantics.
+Python handlers passed to `UserWS.start()` are normal FastHTML websocket handlers registered with `app.ws(...)`. They take the usual parsed parameters plus special  params like `send`, and can return normal FastHTML responses. FastHTML websocket responses are always treated as OOB swaps. `UserWS` only manages connection setup, event isolation, and access to the server-side `send` callable; it does not change FastHTML websocket handler semantics.
 
 ### Environment notes
 
 - Solveit's HTTP proxy does not forward websocket upgrades; always use the public `wss://...solveit.pub/...` URL from `UserWS.url()`, not relative paths.
 - `on_connect` has a timing race: the socket is open and messages arrive, but HTMX may not yet process the first swap. Treat `conn=` as lifecycle bookkeeping only; send UI updates after an explicit client message.
-- The browser helper sends `{msg: '__init__'}` 250ms after `htmx:wsOpen` to confirm the connection is settled before the handler sees real messages. Handlers should `return` early on `msg == '__init__'`.
+- The browser helper sends `{event: '__init__', ...}` 250ms after `htmx:wsOpen` to confirm the connection is settled before the handler sees real messages. Handlers should `return` early on `event == '__init__'`.
 
 **Example**:
 
 ```python
-async def ws_demo(msg:str, send):
-    if msg == '__init__': return
-    await send(Div('Hello ' + msg, id='note2'))
+async def ws_demo(data:dict, send):
+    if data.get('event') == '__init__': return
+    await send(Div('Hello ' + data['msg'], id='uws-note'))
 
 async def _conn(send): print('connected')
 async def _disconn(send): print('disconnected')
@@ -54,8 +54,9 @@ __all__ = ['setup_user_ws', 'UserWS']
 import json, os
 from fastcore.foundation import store_attr
 from fastcore.meta import delegates
+from fasthtml.components import Div, Span
 from pyskills.core import allow
-from dialoghelper import add_scr_a, iife_a, js_eval_a
+from dialoghelper import add_scr_a, iife_a, js_eval_a, add_html_a
 from .dutil import wait_for_a
 from .basic import id_gen
 
@@ -63,89 +64,36 @@ from .basic import id_gen
 # %% ../nbs/03_user_ws.ipynb #21bceb0c
 _new_id = id_gen()
 
-# %% ../nbs/03_user_ws.ipynb #bc5f3896
+# %% ../nbs/03_user_ws.ipynb #f1c1cb5e
+def _indicator(wid): return Span(id=f"{wid}-uws-indicator", cls='size-4 border rounded-full min-w-4', title=wid)
+
+# %% ../nbs/03_user_ws.ipynb #5e5aff60
 _user_ws_js = r'''
-debugger;
-if (window.user_ws) {
-  window.user_ws.listen(false);
-  delete window.user_ws;
-}
-window.user_ws ??= (function() {
-  'use strict'
-  const ids = new Set();
-
-  function _match(e) { return ids.has(e.target?.id) }
-  function _onopen(e) {
-    if (!_match(e)) return;
-    const sw = e.detail.socketWrapper;
-    e.target._ws = sw;
-    setTimeout(() => send(e.target.id, {msg: '__init__'}), 250);
-    e.stopImmediatePropagation();
-  }
-  function _onerr(e) {
-    if (!_match(e)) return;
-    e.stopImmediatePropagation();
-  }
-  function listen(on=true) {
-    const l = (on?document.addEventListener:document.removeEventListener).bind(document);
-    l('htmx:wsOpen', _onopen, true);
-    l('htmx:wsClose', _onerr, true);
-    l('htmx:wsError', _onerr, true);
-  }
-  listen();
-  
-  function setup(id) { ids.add(id) }
-
-  function create(id, wsUrl) {
-    const el = document.createElement('div');
-    el.id = id;
-    el.setAttribute('hx-ext', 'ws');
-    el.setAttribute('ws-connect', wsUrl);
-    document.body.appendChild(el);
-    setup(id);
-    if (window.htmx) htmx.process(el);
-    return 'created';
-  }
-
-  function cleanup(id) {
-    const el = document.getElementById(id);
-    if (el) {
-      el.remove();
-      ids.delete(id);
-      return 'removed';
-    } else { return 'not found'; }
-  }
-
-  function send(id, data) {
-    const el = document.getElementById(id);
-    if (el?._ws) el._ws.send(typeof data === 'string' ? data : JSON.stringify(data));
-  }
-
-  return { listen, setup, create, cleanup, send };
-})();
-'''
-#| linkedto: _f2d7c7c4
-
-# %% ../nbs/03_user_ws.ipynb #27fa9787
-_user_ws_js = r'''
-if (window.user_ws) {
+__debugger__if (window.user_ws) {
   window.user_ws.listen(false);
   delete window.user_ws;
 }
 window.user_ws = (function() {
   'use strict'
   const ids = new Set();
+  let onopen = null, onerr = null, oncleanup = null;
 
-  function _match(e) { return ids.has(e.target?.id) }
+  function config(opts={}) {
+    onopen = opts.onopen || null;
+    onerr = opts.onerr || null;
+    oncleanup = opts.oncleanup || null;
+  }
   function _onopen(e) {
-    if (!_match(e)) return;
-    const sw = e.detail.socketWrapper;
-    e.target._ws = sw;
-    setTimeout(() => send(e.target.id, {msg: '__init__'}), 250);
+    if (!e.target.hasAttribute('data-uws')) return;
+    e.target._ws = e.detail.socketWrapper;
+    ids.add(e.target.id);
+    setTimeout(() => send(e.target.id, {event:'__init__'}), 250);
+    if (onopen) onopen(e.target.id, e);
     e.stopImmediatePropagation();
   }
   function _onerr(e) {
-    if (!_match(e)) return;
+    if (!e.target.hasAttribute('data-uws')) return;
+    if (onerr) onerr(e.target.id, e);
     e.stopImmediatePropagation();
   }
   function listen(on=true) {
@@ -154,67 +102,82 @@ window.user_ws = (function() {
     l('htmx:wsClose', _onerr, true);
     l('htmx:wsError', _onerr, true);
   }
-  function setup(id) { ids.add(id) }
-  function create(id, wsUrl) {
-    const el = document.createElement('div');
-    el.id = id;
-    el.setAttribute('hx-ext', 'ws');
-    el.setAttribute('ws-connect', wsUrl);
-    document.body.appendChild(el);
-    setup(id);
-    if (window.htmx) htmx.process(el);
-    return 'created';
-  }
   function cleanup(id) {
     const el = document.getElementById(id);
     if (el) {
       el.remove();
       ids.delete(id);
+      if (oncleanup) oncleanup(id);
       return 'removed';
     } else return 'not found';
   }
   function send(id, data) {
     const el = document.getElementById(id);
-    if (el?._ws) el._ws.send(typeof data === 'string' ? data : JSON.stringify(data));
+    if (el?._ws) el._ws.send(JSON.stringify(data));
   }
   listen();
   const doc = 'Browser helper for Solveit-safe HTMX websocket initiators';
-  return {doc, listen, setup, create, cleanup, send};
+  return {doc, config, listen, cleanup, send};
 })();
 '''
 #| linkedto: _99847640
 
+# %% ../nbs/03_user_ws.ipynb #b3ca27e8
+_user_ws_indicator_js = r'''
+user_ws.config({
+  onopen: (id,e) => $(`#${id}-uws-indicator`).css('backgroundColor', 'limegreen'),
+  onerr: (id,e) => {
+    const color = { error: 'orange', close: 'red' }[e.detail.event.type] || 'grey';
+    $(`#${id}-uws-indicator`).css('backgroundColor', color);
+  },
+  oncleanup: id => $(`#${id}-uws-indicator`).css('backgroundColor', 'grey')
+})
+'''
+
 # %% ../nbs/03_user_ws.ipynb #015ed1ee
-async def setup_user_ws():
+async def setup_user_ws(debugger=False, indicator=False):
     "Inject the browser-side HTMX websocket event filter and initiator helper"
-    return await add_scr_a(_user_ws_js)
+    js = _user_ws_js.replace('__debugger__', 'debugger;\n' if debugger else '')
+    if indicator: js += '\n' + _user_ws_indicator_js
+    return await add_scr_a(js)
 
-# %% ../nbs/03_user_ws.ipynb #c1dfecc7
+# %% ../nbs/03_user_ws.ipynb #1154399c
+async def noop_a(*args, **kwargs): pass
+
+async def create_user_ws_indicator(wid):
+    return await add_html_a(Div(hx_swap_oob='beforebegin:#uws-note')(_indicator(wid)))
+
+async def cleanup_user_ws_indicator(wid):
+    return await js_eval_a(f'''setTimeout(() => {{ $("#{wid}-uws-indicator").remove() }}, 500); return true''')
+
+# %% ../nbs/03_user_ws.ipynb #032ee110
 class UserWS:
-    "Manage many Solveit-safe HTMX websocket initiators and server send handles keyed by `wid`"
-    def __init__(self, app, srv): store_attr(); self.sends,self.routes = {},set()
+    "Manage Solveit-safe HTMX websocket initiators and server send handles keyed by `wid`"
+    _js='user_ws'
+    def __init__(self, app, srv, create_ui=noop_a, cleanup_ui=noop_a): store_attr(); self.sends,self.routes = {},{}
 
-    def url(self, path):
+    def url(self, path, qs=''):
         "Return public websocket URL for `path`"
-        return f"wss://{json.loads(os.environ['PUBLIC_DOMAINS'])[str(self.srv.port)]}{path}"
+        return f"wss://{json.loads(os.environ['PUBLIC_DOMAINS'])[str(self.srv.port)]}{path}{qs}"
 
     _js='user_ws'
-    async def call(self, fn, *args):
-        "Call a function on the browser-side websocket helper"
-        args = ', '.join(json.dumps(o) for o in args)
-        return await js_eval_a(f"return {self._js}.{fn}({args})")
-
     async def create(self, wid, path):
         "Create browser websocket initiator for `path`"
-        return await self.call('create', wid, self.url(path))
+        wsurl = path if path.startswith('ws') else self.url(path, f"?wid={wid}")
+        await add_html_a(Div(hx_swap_oob='afterend:#ws-div')(Div(ws_connect=wsurl, hx_ext='ws', id=wid, data_uws=True)))
+        await self.create_ui(wid)
+
     async def cleanup(self, wid):
         "Remove browser initiator element"
-        return await self.call('cleanup', wid)
+        try: return await js_eval_a(f'''return {self._js}.cleanup({json.dumps(wid)})''')
+        finally: await self.cleanup_ui(wid)
+
     async def send_client(self, wid, data):
         "Send browser to Python via JS helper"
         return await iife_a(f"{self._js}.send({json.dumps(wid)}, {json.dumps(data)})")
     async def send(self, wid, o):
         "Send Python to browser via stored send callable"
+        assert wid in self.sends, f"{wid} is not connected"
         return await self.sends[wid](o)
     async def wait(self, wid):
         "Wait for websocket connection to be registered"
@@ -237,10 +200,12 @@ class UserWS:
     def add(self, path, handler, wid='', conn=None, disconn=None, **kwargs
     ) -> str: # `wid`
         "Register websocket route once; optionally setup conn/disconn hooks"
-        wid = wid or _new_id('uws', '_')
-        if wid not in self.routes:
-            self.app.ws(path, conn=self._conn(wid, conn), disconn=self._disconn(wid, disconn), **kwargs)(handler)
-            self.routes.add(wid)
+        wid = wid or _new_id('uws')
+        if wid in self.routes:
+            assert self.routes[wid] == path, f"{wid} already registered for {self.routes[wid]}, not {path}"
+            return wid
+        self.app.ws(path, conn=self._conn(wid, conn), disconn=self._disconn(wid, disconn), **kwargs)(handler)
+        self.routes[wid] = path
         return wid
 
     @delegates(add, keep=True)
