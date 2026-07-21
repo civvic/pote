@@ -1,0 +1,52 @@
+project:
+  pre-render:
+    - pysym2md --output_file apilist.txt your_library_name
+  post-render:
+    - llms_txt2ctx llms.txt --optional true --save_nbdev_fname llms-ctx-full.txt
+    - llms_txt2ctx llms.txt --save_nbdev_fname llms-ctx.txt
+  resources:
+    - "*.txt"
+
+  render:
+    - "*.ipynb"
+    - "!*_dup*.ipynb"
+    - "!data/"
+    - "!static/"
+    - "!02_git.ipynb"
+
+
+# 00_basic.ipynb
+# 00_dutil.ipynb
+# 00_project.ipynb
+# 01_callback.ipynb
+# 01_dialog.ipynb
+# 01_tree.ipynb
+# 02_display.ipynb
+# 02_display_dup1.ipynb
+# 02_flakes.ipynb
+# 02_git.ipynb
+# 02_isolated.ipynb
+# 02_logger.ipynb
+# 02_logger_loguru.ipynb
+# 02_server.ipynb
+# 03_user_ws.ipynb
+# 03_user_ws_dup1.ipynb
+# 04_bridge.ipynb
+# 04_bridge_dup1.ipynb
+# 04_browser.ipynb
+# 05_test.ipynb
+# 15_config.ipynb
+# 17_display.ipynb
+# 20_widgets.ipynb
+# _quarto.yml
+# apilist.txt
+# custom.yml
+# data
+# index.ipynb
+# llms-ctx-full.txt
+# llms-ctx.txt
+# llms.txt
+# nbdev.yml
+# static
+# styles.css
+# test_disclose.ipynb

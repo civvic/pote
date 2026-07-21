@@ -2,6 +2,19 @@ project:
   type: website
   resources:
     - "*.txt"
+    - "!static/"
+
+  pre-render:
+    - pysym2md --output_file apilist.txt pote
+  post-render:
+    - llms_txt2ctx llms.txt --optional true --save_nbdev_fname llms-ctx-full.txt
+    - llms_txt2ctx llms.txt --save_nbdev_fname llms-ctx.txt
+
+  render:
+    - "*.ipynb"
+    - "!*_dup*.ipynb"
+    - "!data/"
+    - "!test_disclose.ipynb"
 
 format:
   html:
