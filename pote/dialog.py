@@ -1,28 +1,155 @@
-"""dialog provides message and dialog introspection, and import/export utilities for solveit dialogs.
+"""Provide message and dialog introspection, and import/export utilities for solveit dialogs.
 
-Format a filtered, clamped digest of dialog messages for AI consumption in other sessions. Three output formats are supported: `xml` (preferred — unambiguous structure), `md`, and `json`, each implemented by a parallel `_xml_msg`/`_md_msg`/`_json_msg` function dispatched by `exportmsgs`.
+## Dialog toolkit overview
 
-**Clamping:** note content is progressively disclosed via `clamp_note(level)` — from header-only to header+paragraph — unless the note is fully exported. This keeps digests compact while preserving section structure and intent.
+`pote.dialog` is a toolkit for working with Solveit dialogs as structured collections of messages. It helps inspect message metadata and dialog state, map section structure, select relevant messages, disclose notes and code deterministically, serialize digests, and transfer messages between dialogs.
 
-**Frontmatter:** `mk_frontmatter` prepends YAML metadata (path, timestamp, stats, format conventions) so the consuming LLM knows what it's looking at.
+Main helper families:
 
-`find_msgs` is a staple of SolveIt, a very powerful introspection tool. But it have some limitations (see above how it doesn't honor explicit `nbdev` export directives) and I need more search granularity (e.g., to improve `exportmsgs`).
+- **Content utilities** — `count_tokens`, `split_md_blocks` to split Markdown blocks; use `header_preview`, `clamp_note` to progressively disclose note content.
+- **Message & dialog utilities** — use `get_msg_id`, `get_output`, `format_output`, `nb_path`, `dlg_module`, `dlg_export`, `get_dialog_link`, `get_msg_id`, `format_output`, `get_output` to locate, export, link, and inspect dialogs and messages.
+- **Dialog structure** — use `heading_msgs`, `fmt_sections`, `details_sections`, and `section_map` to build and render a dialog outline.
+- **Disclosure** — use `disclose` for Python source, `disclose_msgs` for copied message lists, and `disclose_dialog` or `disclose_nb` for a whole dialog/notebook.
+- **Selection and digests** — use `filter_msgs_v2` to scope and filter messages, then `exportmsgs` to serialize them as Markdown, XML, or JSON.
+- **Cross-dialog transfer** — use `importdlg` to insert selected messages into another dialog.
 
-We're going to implement `filter_msgs_v1`, a wrapper over `find_msgs_x` with progressively improved search semantics. With no arguments, `filter_msgs_v1` return an empty list.
+The usual flow is: inspect dialog structure, select messages, optionally disclose notes and code, then serialize or transfer the selected messages. Selection preserves dialog order.
 
-Let's start with `nbdev` export directives: if given `exported=True`, `filter_msgs_v1` should return **all** exported messages, those marked with SolveIt UI toggle **and** the ones with `nbdev` exported directives.
+---
+
+## content utils
+
+`count_tokens()` measures how much LLM context a piece of text uses.
+
+```python
+count_tokens("Hello world!")
+# 3
+```
+
+`first_para()` extracts the first meaningful paragraph from Markdown content, ignoring headings, lists, and code blocks.
+
+```python
+first_para('# Title\n\nFirst sentence. Second sentence.\n\nSecond paragraph.')
+# 'First sentence. Second sentence.'
+```
+
+`first_sent()` extracts the first sentence of that paragraph.
+
+```python
+first_sent('First sentence. Second sentence.')
+# 'First sentence.'
+```
+
+`split_md_blocks()`
+Splits a markdown string into its constituent blocks, separating fenced code blocks from surrounding prose, so callers can process or transform each block type independently.
+
+---
+
+## note disclosure
+
+`header_preview` returns a compact preview only for Markdown content beginning with a heading. `clamp_note` provides the same heading-based levels, plus paragraph and line-based excerpts.
+
+| Level | Returns |
+|---|---|
+| `'header'` | The leading heading only |
+| `'header+'` | Heading + first sentence of the immediately following Markdown paragraph |
+| `'header++'` | Heading + the immediately following Markdown paragraph |
+| `'first_para'` | First Markdown paragraph anywhere in the content |
+| `int` | First *n* source lines after trimming outer whitespace |
+
+For `'header+'` and `'header++'`, the first block after the heading must be a paragraph. A subheading, list, block quote, code fence, missing block, unsupported level, or missing leading heading returns `''`. `'header'` needs no following paragraph.
+
+Both functions accept `max_chars` to cap the complete returned excerpt. When truncation is needed, they append `suffix` (default: `'…'`); `max_chars=0` returns `''`. Integer excerpts preserve blank lines within the selected lines.
+
+```python
+header_preview('# Title\n\nIntro. More detail.', 'header+')
+# '# Title\nIntro.'
+
+header_preview('# Title\n\n## Later section\n\nIntro.', 'header++')
+# ''
+
+clamp_note('# Title\n\nIntro. More detail.', 'first_para', max_chars=10)
+# 'Intro. Mo…'
+
+clamp_note('One\n\nTwo\nThree', 3)
+# 'One\n\nTwo'
+```
+
+---
+
+## Dialog section navigation
+
+Use these helpers to turn a dialog’s heading notes into a navigable outline.
+
+```python
+secs = await heading_msgs()
+```
+
+Returns ordered `(id, level, title, summary)` records for Markdown headings.
+
+```python
+Markdown(fmt_sections(secs))
+```
+
+Renders a compact Markdown outline, with hierarchy and `#_<id>` message links.
+
+```python
+details_sections(secs)
+```
+
+Renders the same structure as a nested, collapsible HTML tree.
+
+Use `heading_msgs(dname)` for another dialog; omit `dname` for the current one.
+
+### Common workflows
+
+Inspect a dialog’s conceptual structure:
+
+```python
+secs = await heading_msgs('/prj/pote/nbs/01_dialog')
+```
+
+Select non-hidden exported material from one section, preserving dialog order:
+
+```python
+msgs = await filter_msgs_v2(section='## distill', metadata=['exported', '!hidden'])
+```
+
+Create a compact handoff-style Markdown digest from an already selected list:
+
+```python
+md = exportmsgs(disclose_msgs(msgs, note_level='header++', code_level=2), fmt='md', hdr_clamp='full', output=False)
+```
+
+Import the latest defining message for a symbol from another dialog:
+
+```python
+new_ids = await importdlg('/prj/pote/nbs/01_dialog', syms=['filter_msgs_v2'], header=True)
+```
+
+Use `doc()` on the relevant function before calling it: the module overview identifies a helper family, while function documentation supplies its exact contract.
+
+### Preferred message-selection workflow
+
+Use `filter_msgs_v2` for high-level selection. It first scopes messages by `ids` and/or `section`, then filters within that scope by message type, metadata, and an optional content pattern. Positive filter terms are unioned; `!`-prefixed terms are removed from the scoped result; returned messages retain dialog order.
+
+`filter_msgs_v1` remains available as an exploratory union-based query model, but `filter_msgs_v2` is normally the clearer choice for scoped work.
+
+### Digest workflow
+
+A digest has three independent stages: select messages with `filter_msgs_v2` or a supplied list; optionally create copied, progressively disclosed messages with `disclose_msgs`; then serialize with `exportmsgs` as Markdown, XML, or JSON. `exportmsgs` serializes selected messages; it does not decide which messages are relevant.
+
+Disclosure is deterministic: `clamp_note` reduces note detail and `disclose` reduces code detail without modifying originals. Digest and chunk strings are transient artifacts; materialize them into dialog messages or files when they must remain available as durable context.
 
 Docs: https://civvic.github.io/pote/dialog.html.md"""
 
 # AUTOGENERATED! DO NOT EDIT! File to edit: ../nbs/01_dialog.ipynb.
 
 # %% auto #0
-__all__ = ['is_exported', 'is_hidden', 'is_echo', 'is_header', 'is_skipped', 'clamp_note', 'MsgX', 'msgx', 'find_msgs_x',
-           'nb_path', 'dlg_module', 'dlg_export', 'get_dialog_link', 'empty_dialog_nb', 'get_msg_id', 'get_output',
-           'format_output', 'split_md_blocks', 'stub_fn', 'disclose', 'dialog_code', 'disclose_dialog', 'disclose_nb',
-           'output2md', 'strip_directives', 'strip_tags', 'mk_frontmatter', 'exportmsgs', 'get_section', 'section_map',
-           'filter_msgs_v1', 'filter_msgs_v2', 'disclose_msgs', 'disclosure_kwargs', 'disclose_profile',
-           'exportmsgs_profile', 'disclose_msg', 'digest_chunk', 'find_symbol_msg', 'importdlg']
+__all__ = ['count_tokens', 'first_para', 'first_sent', 'split_md_blocks', 'header_preview', 'clamp_note', 'get_msg_id',
+           'get_output', 'format_output', 'nb_path', 'dlg_module', 'dlg_export', 'get_dialog_link', 'heading_msgs',
+           'fmt_sections', 'details_sections', 'disclose', 'exportmsgs', 'section_map', 'filter_msgs_v2',
+           'disclose_msgs', 'importdlg']
 
 # %% ../nbs/01_dialog.ipynb #1e28a183
 import re, json, ast, warnings, copy, asttokens
@@ -31,9 +158,11 @@ from pathlib import Path
 from typing import TypeAlias
 from IPython import get_ipython
 from mistletoe import Document
-from mistletoe.block_token import CodeFence
-from mistletoe.markdown_renderer import MarkdownRenderer
-from fastcore.foundation import patch, adict, AttrDict as AD
+from mistletoe.block_token import CodeFence, Quote as BlockQuote, Paragraph, Heading
+from mistletoe.markdown_renderer import MarkdownRenderer,BlankLine
+from mdhtml import to_md
+from fasthtml.components import A, Details, P, Summary, Li, Ul
+from fastcore.foundation import patch, AttrDict as AD
 from fastcore.meta import delegates
 from fastcore.nbio import mk_cell
 from fastcore.py2pyi import functypes
@@ -41,9 +170,107 @@ from dialoghelper.core import add_msg, read_msg, find_msgs, msg_idx, run_msg, to
 from dialoghelper.utils import ast_py
 from .dutil import in_dialog
 
-
-# %% ../nbs/01_dialog.ipynb #e2f454e8
+# %% ../nbs/01_dialog.ipynb #7e7a6f23
 Msg: TypeAlias = AD
+
+# %% ../nbs/01_dialog.ipynb #5bc6f162
+class MsgX(Msg): ...
+
+# %% ../nbs/01_dialog.ipynb #fa0e5b45
+def msgx(msg:Msg) -> MsgX:
+    "Cast `msg` to MsgX in place and return it."
+    msg.__class__ = MsgX
+    return msg
+
+# %% ../nbs/01_dialog.ipynb #bb3e6b75
+@delegates(find_msgs)
+async def find_msgs_x(*args, **kwargs) -> list[MsgX]:
+    "find_msgs returning MsgX instances."
+    ms = await find_msgs(*args, **kwargs)
+    for m in ms: m.__class__ = MsgX
+    return ms
+
+# %% ../nbs/01_dialog.ipynb #dba09e40
+def count_tokens(src, model='cl100k_base'):
+    "Count tokens in `src` using `model` encoding"
+    import tiktoken
+    return len(tiktoken.get_encoding(model).encode(src))
+
+# %% ../nbs/01_dialog.ipynb #6d6582de
+def first_para(src, allowed_before=(Heading,), allow_blockquote=False):
+    "Return he first top-level prose block from Markdown `src`, optionally preceded by one allowed lead-in block, or `''`."
+    doc = Document(to_md(src).splitlines(keepends=True))
+    cs = [o for o in doc.children if not isinstance(o, BlankLine)]
+    if cs and isinstance(cs[0], allowed_before): cs = cs[1:]
+    if cs:
+        if isinstance((o := cs[0]), Paragraph): return MarkdownRenderer().render(o).strip()
+        if allow_blockquote and isinstance(o, BlockQuote):
+            para = next((c for c in o.children if isinstance(c, Paragraph)), None)
+            if para: return MarkdownRenderer().render(para).strip()
+    return ''
+
+# %% ../nbs/01_dialog.ipynb #271136e5
+@delegates(first_para)
+def first_sent(src, **kwargs):
+    "Return first sentence of first Markdown paragraph in `src`."
+    src = first_para(src, **kwargs).strip()
+    m = re.search(r'''(?s).*?[.!?][*_`)\]]*(?=\s|$)''', src)
+    return m.group() if m else src
+
+# %% ../nbs/01_dialog.ipynb #3dd8f5b5
+def split_md_blocks(md):
+    "Split markdown into fenced/non-fenced blocks via mistletoe AST"
+    with MarkdownRenderer() as renderer:
+        doc = Document(md)
+        blocks,buf = [],[]
+        for c in doc.children:
+            if isinstance(c, CodeFence):
+                if buf: blocks.append(''.join(buf)); buf = []
+                blocks.append(renderer.render(c))
+            else: buf.append(renderer.render(c))
+        if buf: blocks.append(''.join(buf))
+        return blocks
+
+# %% ../nbs/01_dialog.ipynb #ee41d557
+def _clamp_chars(src,
+    max_chars:int=None, # Maximum characters in returned excerpt
+    suffix:str='…' # Suffix to append when truncating
+):
+    if max_chars is None or len(src) <= max_chars: return src
+    return src[:max_chars-len(suffix)] + suffix if max_chars else ''
+
+# %% ../nbs/01_dialog.ipynb #45a0e97f
+_ATX_hdr_pat = r'''\A#{1,6}(?:[ \t]+|$)'''
+_ATX_hdr = re.compile(_ATX_hdr_pat)
+
+@delegates(_clamp_chars)
+def header_preview(
+    src:str, # Markdown content
+    level:str='header', # Disclosure level: 'header': title; 'header+': title+first sentence; 'header++' title+first paragraph
+    **kwargs
+) -> str: # Heading-led excerpt of `src`, or `''` when unavailable
+    "Return a heading, or a heading-led preview when the next block is a paragraph."
+    if level not in ('header', 'header+', 'header++'): return ''
+    hdr,_,rest = src.strip().partition('\n')
+    if not _ATX_hdr.match(hdr): return ''
+    if level == 'header': return _clamp_chars(hdr, **kwargs)
+    first = next(iter(Document(to_md(rest.strip()).splitlines(keepends=True)).children), None)
+    if type(first).__name__ != 'Paragraph': return ''
+    para = MarkdownRenderer().render(first).strip()
+    excerpt = first_sent(para) if level == 'header+' else para
+    return _clamp_chars(f'{hdr}\n{excerpt}', **kwargs)
+
+# %% ../nbs/01_dialog.ipynb #428b9004
+@delegates(_clamp_chars)
+def clamp_note(
+    src:str, # Markdown content
+    level:str|int='header', # Disclosure level: header level, 'first_para', or int for max lines
+    **kwargs
+) -> str:
+    "Return a progressively disclosed excerpt of Markdown `src`."
+    if not (src := src.strip()): return ''
+    excerpt = '\n'.join(src.splitlines()[:level]) if isinstance(level, int) else first_para(src) if level == 'first_para' else header_preview(src, level)
+    return _clamp_chars(excerpt, **kwargs)
 
 # %% ../nbs/01_dialog.ipynb #084ce165
 _exports = {'exporti', 'exports', 'exportd', 'export'}
@@ -71,43 +298,13 @@ def is_header(m:Msg) -> bool:
 
 def is_skipped(m:Msg) -> bool: return bool(m.get('skipped'))
 
-# %% ../nbs/01_dialog.ipynb #c087a3d1
-def clamp_note(
-    c:str, # Markdown note content
-    level:str|int='header' # Disclosure level: 'header', 'header+', 'header++', or int for max lines
-) -> str:
-    "Return a progressively disclosed excerpt of a markdown note."
-    c = c.strip().splitlines()
-    if c:
-        if isinstance(level, int): return '\n'.join(c[:level])
-        if level == 'header': return c[0] if c[0][0] == '#' else ''
-        if level == 'header+':
-            i, res = 0, c[0]
-            if res[0] != '#': return ''
-            while (i:=i+1) < len(c):
-                if c[i]: return f"{res}\n{c[i]}"
-            return res
-        if level.startswith('header++'):
-            header = c[0] if c[0][0] == '#' else ''
-            if not header: return ''
-            blocks = [b.strip() for b in '\n'.join(c[1:]).split('\n\n') if b.strip()]
-            if blocks:
-                first = blocks[0].splitlines()[0]
-                if not first.startswith('#') and not first.startswith(('```', '~~~')):
-                    return f"{header}\n{blocks[0]}"
-            return header
-    return ''
+# %% ../nbs/01_dialog.ipynb #4c78172c
+def is_msg_(msg, param='exported', **kwargs) -> bool:
+    "Check message has property selected by `param`."
+    assert param in {'exported','hidden','echo','header','skipped'}
+    return dict(exported=is_exported, hidden=is_hidden, echo=is_echo, header=is_header, skipped=is_skipped)[param](msg, **kwargs)
 
-# %% ../nbs/01_dialog.ipynb #04219f9f
-class MsgX(Msg): ...
-
-# %% ../nbs/01_dialog.ipynb #fc5b3723
-def msgx(msg:adict) -> None:
-    "Return `msg` cast to MsgX."
-    msg.__class__ = MsgX
-    return msg
-
-# %% ../nbs/01_dialog.ipynb #dcb3edce
+# %% ../nbs/01_dialog.ipynb #953d3651
 @patch(as_prop=True)
 def exported_x(self:MsgX) -> bool: return is_exported(self)
 @patch(as_prop=True)
@@ -117,29 +314,51 @@ def echo_x(self:MsgX) -> bool: return is_echo(self)
 @patch(as_prop=True)
 def header_x(self:MsgX) -> bool: return is_header(self)
 
-# %% ../nbs/01_dialog.ipynb #67ed7e1f
-@delegates(find_msgs)
-async def find_msgs_x(*args, **kwargs) -> list[MsgX]:
-    "find_msgs returning MsgX instances."
-    ms = await find_msgs(*args, **kwargs)
-    for m in ms: m.__class__ = MsgX
-    return ms
+# %% ../nbs/01_dialog.ipynb #447130b0
+async def get_msg_id():
+    "Get current message id."
+    return (await read_msg(0)).id
 
-# %% ../nbs/01_dialog.ipynb #05549ac3
-def nb_path(dname:str=''): return (Path.home()/(dname or find_dname()).removeprefix('/')).with_suffix('.ipynb')
+# %% ../nbs/01_dialog.ipynb #096bafac
+@delegates(read_msg)
+async def get_output(id:str=None, **kwargs) -> str:
+    "Return rendered output for message `id` or the current message."
+    msg = await read_msg(0, id=id, **kwargs)
+    return msg.output
+
+# %% ../nbs/01_dialog.ipynb #a42b6587
+_format = get_ipython().display_formatter.format if in_dialog() else None
+
+# %% ../nbs/01_dialog.ipynb #abcf61d2
+_format = get_ipython().display_formatter.format if in_dialog() else None
+
+# %% ../nbs/01_dialog.ipynb #233bc0e2
+@delegates(_format)
+def format_output(o, **kwargs):
+  d, md = _format(o, **kwargs) if _format else ('', {})
+  return json.dumps([{"data": d, "metadata": md, "output_type": "display_data"}])
+
+# %% ../nbs/01_dialog.ipynb #65ab1d8a
+def nb_path(dname:str=''):
+    "Return filesystem `.ipynb` path backing dialog `dname`."
+    dname = find_dname() if not dname else find_dname(dname)
+    return (Path.home()/dname.removeprefix('/')).with_suffix('.ipynb')
 
 # %% ../nbs/01_dialog.ipynb #7419f2b9
 _exp_pat =r'^\s*#\s*\|\s*default_exp\s+(\w+)'
 async def dlg_module(dname:str='', solo_nb:bool=False):
-    "Finds the nbdev default_exp in a dialog, or the solo module name if not nbdev"
+    "Return nbdev module name for `dname`, or its notebook stem for solo/non-nbdev dialogs."
     from nbdev.config import is_nbdev
     if not is_nbdev(p := nb_path(dname)) or solo_nb: return p.stem
     msgs = await find_msgs(_exp_pat, dname=(dname or find_dname()), context=0, limit=1, include_output=False, include_meta=False)
     if msgs: return msgs[0].content.strip().split()[-1]
 
 # %% ../nbs/01_dialog.ipynb #0872c7b7
-async def dlg_export(dname:str='', solo_nb:bool=False):
-    "Export dialog `dname` to Python module"
+async def dlg_export(
+    dname:str='', # Dialog name: '' for current; otherwise dialoghelper-relative or /-root-relative; omit `.ipynb`
+    solo_nb:bool=False # Export as standalone `.py` beside the notebook instead of using the nbdev project module path?
+):
+    "Export dialog to Python and return whether its generated module exists; non-nbdev dialogs export standalone automatically."
     from nbdev.export import nb_export
     from nbdev.config import get_config, is_nbdev
     p = nb_path(dname)
@@ -173,39 +392,49 @@ def empty_dialog_nb() -> str:
 }
 '''
 
-# %% ../nbs/01_dialog.ipynb #17421964
-async def get_msg_id():
-    "Get current message id."
-    return (await read_msg(0)).id
+# %% ../nbs/01_dialog.ipynb #f8417d66
+def _first_sent(s):
+    ls = s.splitlines()[1:]
+    while ls and not ls[0].strip(): ls.pop(0)
+    block = []
+    for l in ls:
+        if not l.strip() or re.match(r'''^[ \t]*(#{1,6}[ \t]|```|~~~|([-*_])\2\2+[ \t]*$)''', l): break
+        block.append(re.sub(r'''^[ \t]*>[ \t]?''', '', l))
+    p = ' '.join(block).strip()
+    m = re.search(r'''\S.*?[.!?](?=$|\s|["')\]])''', p)
+    return m.group().strip() if m else p or ''
 
-# %% ../nbs/01_dialog.ipynb #da13ebb8
-@delegates(read_msg)
-async def get_output(id:str=None, **kwargs) -> list[str]:
-    msg = await read_msg(0, id=id, **kwargs)
-    return msg.output
+# %% ../nbs/01_dialog.ipynb #3b99a030
+async def heading_msgs(dname=''):
+    "Return `(id, level, title, summary)` records for heading notes in dialog order."
+    msgs = await find_msgs(_ATX_hdr_pat, msg_type='note', include_output=False, context=0, dname=dname)
+    return [(o.id, len(s:=o.content.splitlines()[0])-len(s.lstrip('#')), s.lstrip('#').lstrip(), first_sent(o.content, allow_blockquote=True)) for o in msgs]
 
-# %% ../nbs/01_dialog.ipynb #88c3710d
-_format = get_ipython().display_formatter.format if in_dialog() else None
+# %% ../nbs/01_dialog.ipynb #268eafea
+def fmt_sections(secs, template='{indent}**{title}** — {sent} #_{id}'):
+    "Render heading records as an indented Markdown outline with message links."
+    return '\n\n'.join(template.format(id=id, level=lvl, title=title, sent=sent or '', indent='&nbsp;'*4*(lvl-1)) for id,lvl,title,sent in secs)
 
-# %% ../nbs/01_dialog.ipynb #fc332cae
-delegates(_format)
-def format_output(o, **kwargs):
-  d, md = _format(o, **kwargs) if _format else ('', {})
-  return json.dumps([{"data": d, "metadata": md, "output_type": "display_data"}])
-
-# %% ../nbs/01_dialog.ipynb #7013a81a
-def split_md_blocks(md):
-    "Split markdown into fenced/non-fenced blocks via mistletoe AST"
-    with MarkdownRenderer() as renderer:
-        doc = Document(md)
-        blocks,buf = [],[]
-        for c in doc.children:
-            if isinstance(c, CodeFence):
-                if buf: blocks.append(''.join(buf)); buf = []
-                blocks.append(renderer.render(c))
-            else: buf.append(renderer.render(c))
-        if buf: blocks.append(''.join(buf))
-        return blocks
+# %% ../nbs/01_dialog.ipynb #31ed145d
+def details_sections(secs, open=False):
+    "Render heading records as a nested collapsible HTML section tree."
+    root = []
+    stack = [(0,root)]
+    for id,lvl,title,sent in secs:
+        node = [id,title,sent,[]]
+        while stack[-1][0] >= lvl: stack.pop()
+        stack[-1][1].append(node)
+        stack.append((lvl,node[3]))
+    def fmt(nodes, lvl=1):
+        return Ul(*[
+            Li(Details(open=open and lvl==1, cls='json')(
+                Summary(A(title, href=f'#_{id}')),
+                *([P(sent)] if sent else []),
+                *([fmt(kids, lvl+1)] if kids else [])
+            ))
+            for id,title,sent,kids in nodes
+        ])
+    return fmt(root)
 
 # %% ../nbs/01_dialog.ipynb #81a301e3
 def _is_docstring(n): return isinstance(n, ast.Expr) and isinstance(n.value, ast.Constant) and isinstance(n.value.value, str)
@@ -217,7 +446,7 @@ def _postprocess(s):
     s = re.sub(r'\n{3,}', '\n\n', s)
     return re.sub(r':\n[ \t]+\.\.\.', ': ...', s)
 
-_compound_types = (ast.If, ast.For, ast.While, ast.With, ast.Try, ast.Match)
+_compound_types = ast.If,ast.For,ast.While,ast.With,ast.Try,ast.TryStar,ast.Match
 
 # %% ../nbs/01_dialog.ipynb #2e4f5500
 def _strip_private(tree):
@@ -252,6 +481,7 @@ def _class_chunk(atok, node, level):
     if level == 3: return atok.get_text(node)
     start_line = node.decorator_list[0].lineno if node.decorator_list else node.lineno
     body_start = node.body[0].lineno - start_line
+    if body_start == 0: return atok.get_text(node)
     lines = atok.get_text(node).splitlines()
     hdr = '\n'.join(lines[:body_start])
     body = []
@@ -277,7 +507,7 @@ def _compound_chunk(atok, node, level):
 
 # %% ../nbs/01_dialog.ipynb #d27baedb
 def disclose(src:str, level=1, strip_private=False) -> str:
-    "Disclose Python source at `level` (1=sigs, 2=sigs+docs, 3=full)"
+    "Return valid Python disclosed at level 1=sigs, 2=sigs+docs+docments, or 3=full source."
     if not src.strip(): return ''
     try:
         atok = asttokens.ASTTokens(src, parse=True)
@@ -326,12 +556,12 @@ def _disclose_srcs(srcs, level=1, strip_private=False, fmt='text', dname=''):
     return _compact('\n\n'.join(src for _,src in chunks))
 
 async def disclose_dialog(dname='', level=1, include='all', strip_private=False, fmt='text'):
-    "Disclose dialog `dname` at `level` filtering by `include`"
+    "Return disclosed code cells from dialog `dname` in text, XML, or JSON."
     srcs = await dialog_code(dname=dname, include=include)
     return _disclose_srcs(srcs, level=level, strip_private=strip_private, fmt=fmt, dname=dname)
 
 def disclose_nb(path, level=1, strip_private=False, fmt='text'):
-    "Return disclosed source of all code cells in notebook at `path`"
+    "Return disclosed code cells from notebook `path` in text, XML, or JSON."
     nb = json.loads(Path(path).read_text())
     srcs = [(c.get('id',''), c['source'] if isinstance(c['source'], str) else ''.join(c['source']))
             for c in nb['cells'] if c['cell_type'] == 'code']
@@ -348,7 +578,7 @@ def _mk_tag(m, mtyp, ids):
 
 # %% ../nbs/01_dialog.ipynb #d2bc045a
 def output2md(c, langid='output'):
-    return f'''```{langid}\n{c}\n```''' if c else ''
+    return f'''```{langid}\n{c}\n```''' if c else '' 
 
 # %% ../nbs/01_dialog.ipynb #ff4409be
 def strip_directives(c): return ('\n'.join(l for l in c.splitlines() if not l.startswith('#|'))).strip()
@@ -446,7 +676,7 @@ def exportmsgs(
     frontmatter:dict=None,  # if present, call `mk_frontmatter` with this dict as args
     fmt='xml',  # 'xml'|'md'|'json'
 ):
-    "Export messages as a digest for AI consumption"
+    "Serialize selected messages as an XML, Markdown, or JSON dialog digest."
     fn = {'xml': _xml_msg, 'md': _md_msg, 'json': _json_msg}[fmt]
     parts = [p for m in msgs if (p := fn(m, ids, output, hdr_clamp))]
     if fmt == 'json': res = json.dumps({'msgs': parts}, indent=2)
@@ -594,14 +824,14 @@ async def filter_msgs_v2(
     use_regex:bool=True, # Use regex matching?
     dname:str='', # Dialog to get messages for; defaults to current dialog.
 ) -> list[MsgX]:
-    "Two-phase filter: scope by ids/section, then OR-filter by type/metadata/pattern with ! negation."
+    "Scope by ids/sections, then union-filter by type, metadata, or content with `!` negation."
     if not any([ids is not None, section, msg_type, metadata, re_pattern]): return []
     msgs = msgs or await find_msgs_x(include_skipped=True, dname=dname)
     return _filter_pos_neg(_scope_msgs(msgs, ids, section), msg_type, metadata, re_pattern, use_case, use_regex)
 
 # %% ../nbs/01_dialog.ipynb #e53fbfb6
 def disclose_msgs(msgs:list[MsgX], note_level='header++', code_level=2, output=False) -> list[MsgX]:
-    "Return disclosed copies of `msgs`."
+    "Return copied messages with deterministically disclosed notes, code, and outputs."
     return [disclose_msg(m, note_level=note_level, code_level=code_level, output=output) for m in msgs]
 
 # %% ../nbs/01_dialog.ipynb #74c4f9f0
@@ -645,10 +875,10 @@ def _chunk_title(c, i): return c.title or f'chunk {i}'
 def disclose_msg(m:MsgX, note_level='header++', code_level=2, output=False) -> MsgX:
     "Return a disclosed copy of message `m`."
     res = msgx(AD(m.copy()))
-    if res.msg_type == 'note' and note_level != 'full': res.content = clamp_note(res.content, note_level)
+    if res.msg_type == 'note' and note_level != 'full':
+        res.content = clamp_note(res.content, note_level) or clamp_note(res.content, 'header')
     if res.msg_type == 'code' and code_level != 'full':
-        res.content = disclose(strip_directives(res.content), code_level)
-        if not res.content.strip(): res.content = '...'
+        res.content = disclose(strip_directives(res.content), code_level) or '...'
     if not output: res.output = ''
     return res
 
@@ -704,7 +934,7 @@ async def importdlg(
     header:bool=False,  # wrap imports in collapsed header with dialog name
     heading_collapsed:bool=False  # collapse the header after creation
 ):
-    "Import messages from dname by symbols, ids, regex filter, or all messages; inserts below current message in original order"
+    "Copy selected source-dialog messages below the current message in original order."
     msgs, to_import = await find_msgs(dname=dname, include_meta=True, include_output=True), []
     if not dname: msgs = msgs[:await msg_idx()]
     if syms or ids:
@@ -721,12 +951,10 @@ async def importdlg(
         if re_include: to_import = [m for m in to_import if re.search(re_include, m.content + m.output, re.MULTILINE | re.DOTALL)]
         if re_exclude: to_import = [m for m in to_import if not re.search(re_exclude, m.content + m.output, re.MULTILINE | re.DOTALL)]
     new_ids = [await add_msg(**_r(m)) for m in to_import]
-    if header and new_ids: 
+    if header and new_ids:
         hdrid = await add_msg(f"## Imported from {dname}", placement='add_before', id=new_ids[0])
         new_ids.insert(0, hdrid)
         new_ids.append(await add_msg("## ----", id=new_ids[-1]))
-    # time.sleep(0.5)
     if run and new_ids: await run_msg(','.join(new_ids))
-    # time.sleep(0.1)
     if heading_collapsed and header: await toggle_header(hdrid)
     return new_ids

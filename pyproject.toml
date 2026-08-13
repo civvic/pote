@@ -37,6 +37,10 @@ include = ['pote']
 
 [project.entry-points.pyskills]
 "pote.user_ws" = "pote.user_ws"
+"pote.server" = "pote.server"
+"pote.dialog" = "pote.dialog"
+"pote.dlg2pyskill" = "pote.dlg2pyskill"
+"pote.flakes" = "pote.flakes"
 
 [tool.nbdev]
 allowed_metadata_keys = ['solveit']

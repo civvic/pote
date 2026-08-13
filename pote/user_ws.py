@@ -61,15 +61,15 @@ __all__ = ['setup_user_ws', 'UserWS']
 
 # %% ../nbs/03_user_ws.ipynb #92031bb1
 import json, os
-from urllib.parse import urlencode
-from fastcore.foundation import store_attr
+from urllib.parse import parse_qsl, urlencode, urlparse, urlunparse
+from fastcore.foundation import store_attr, AttrDict as AD
 from fastcore.meta import delegates
 from fasthtml.components import Div, Span
-from pyskills.core import allow
+from fasthtml.core import FastHTML
 from dialoghelper import iife_a, js_eval_a, add_html_a, event_get_a
-from .dutil import wait_for_a
 from .basic import id_gen
-from .server import add_mod, serve_app
+from .dutil import wait_for_a
+from .server import setup_mod
 
 # %% ../nbs/03_user_ws.ipynb #21bceb0c
 _new_id = id_gen()
@@ -77,215 +77,139 @@ _new_id = id_gen()
 # %% ../nbs/03_user_ws.ipynb #f1c1cb5e
 def _indicator(wid): return Span(id=f"{wid}-uws-indicator", cls='size-4 border rounded-full min-w-4', title=wid)
 
-# %% ../nbs/03_user_ws.ipynb #be672e9d
-_user_ws_js = r'''if (window.user_ws) {
-  window.user_ws.listen(false);
-  delete window.user_ws;
-}
+# %% ../nbs/03_user_ws.ipynb #f23af906
+_user_ws_js = "if (window.user_ws) {\n  window.user_ws.listen(false);\n  delete window.user_ws;\n}\n\nfunction hooks() { return {open:[], close:[], err:[], cleanup:[]} }\nconst _hooks = hooks()\nfunction on(name, fn) { _hooks[name].push(fn); return () => off(name, fn); }\nfunction off(name, fn) { _hooks[name] = _hooks[name].filter(o => o !== fn) }\nfunction call(name, ...args) { for (const fn of _hooks[name]) fn(...args); }\n\nfunction _elt(e) { return e.detail?.elt || e.target }\nfunction _onopen(e) {\n  const elt = _elt(e);\n  if (!elt?.hasAttribute('data-uws')) return;\n  e.stopImmediatePropagation();\n  elt._ws = e.detail.socketWrapper;\n  setTimeout(() => send(elt.id, {event:'__init__'}), 250);\n  call('open', elt, e);\n}\nfunction _onerr(e) {\n  const elt = _elt(e);\n  if (!elt?.hasAttribute('data-uws')) return;\n  e.stopImmediatePropagation();\n  call(e.type === 'htmx:wsClose' ? 'close' : 'err', elt, e)\n}\nasync function _opened(e) {\n  const {idx,wid,timeout=3000} = e.detail;\n  const end = Date.now()+timeout;\n  while (Date.now()<end) {\n    const el = document.getElementById(wid);\n    if (el?._ws) return pushData(idx, {open:true});\n    await new Promise(r => setTimeout(r, 25));\n  }\n  pushData(idx, {open:false});\n}\nfunction listen(on=true) {\n  const l = (on ? document.addEventListener : document.removeEventListener).bind(document);\n  l('htmx:wsOpen', _onopen, true);\n  l('htmx:wsClose', _onerr, true);\n  l('htmx:wsError', _onerr, true);\n  l('uws:open?', _opened, false);\n}\nfunction cleanup(id) {\n  const el = document.getElementById(id);\n  if (!el) return 'not found';\n  htmx.remove(el);\n  call('cleanup', el);\n  return 'removed';\n}\nfunction send(id, data={}) {\n  const el = document.getElementById(id);\n  if (!el?._ws) return;\n  const o = typeof data === 'string' ? {msg:data} : {...data};\n  o.wid ??= id;\n  el._ws.send(JSON.stringify(o), el);\n}\n\nlisten();\nconst doc = 'Browser helper for Solveit-safe HTMX websocket initiators';\nconst user_ws = {doc, listen, cleanup, send, on, off};\nwindow.user_ws = user_ws\nexport { user_ws }"
+#| linkedto: 84d6a28f
 
-function hooks() { return {open:[], close:[], err:[], cleanup:[]} }
-const _hooks = hooks()
-function on(name, fn) { _hooks[name].push(fn); return () => off(name, fn); }
-function off(name, fn) { _hooks[name] = _hooks[name].filter(o => o !== fn) }
-function call(name, ...args) { for (const fn of _hooks[name]) fn(...args); }
-
-function _elt(e) { return e.detail?.elt || e.target }
-function _onopen(e) {
-  const elt = _elt(e);
-  if (!elt?.hasAttribute('data-uws')) return;
-  e.stopImmediatePropagation();
-  elt._ws = e.detail.socketWrapper;
-  setTimeout(() => send(elt.id, {event:'__init__'}), 250);
-  call('open', elt, e);
-}
-function _onerr(e) {
-  const elt = _elt(e);
-  if (!elt?.hasAttribute('data-uws')) return;
-  e.stopImmediatePropagation();
-  call(e.type === 'htmx:wsClose' ? 'close' : 'err', elt, e)
-}
-async function _opened(e) {
-  const {idx,wid,timeout=3000} = e.detail;
-  const end = Date.now()+timeout;
-  while (Date.now()<end) {
-    const el = document.getElementById(wid);
-    if (el?._ws) return pushData(idx, {open:true});
-    await new Promise(r => setTimeout(r, 25));
-  }
-  pushData(idx, {open:false});
-}
-function listen(on=true) {
-  const l = (on ? document.addEventListener : document.removeEventListener).bind(document);
-  l('htmx:wsOpen', _onopen, true);
-  l('htmx:wsClose', _onerr, true);
-  l('htmx:wsError', _onerr, true);
-  l('uws:open?', _opened, false);
-}
-function cleanup(id) {
-  const el = document.getElementById(id);
-  if (el) {
-    el.remove();
-    call('cleanup', el);
-    return 'removed';
-  } else return 'not found';
-}
-function send(id, data={}) {
-  const el = document.getElementById(id);
-  if (!el?._ws) return;
-  const o = typeof data === 'string' ? {msg:data} : {...data};
-  o.wid ??= id;
-  el._ws.send(JSON.stringify(o), el);
-}
-
-listen();
-const doc = 'Browser helper for Solveit-safe HTMX websocket initiators';
-const user_ws = {doc, listen, cleanup, send, on, off};
-window.user_ws = user_ws
-export { user_ws }'''
-#| linkedto: 99847640
-
-# %% ../nbs/03_user_ws.ipynb #26fc4be7
-_user_ws_indicator_js = r'''import { user_ws } from '/esm/user_ws'
-
-function truncS(s, l=120) { s = String(s); return s.length <= l ? s : s.substring(0, l) + '\u2026'; }
-function shownote(id, msg, dir, color) {
-  $('#uws-note').empty()
-    .append($('<span>').css('color', color).text(dir))
-    .append(document.createTextNode(`${id}: `))
-    .append($('<samp>').text(truncS(msg)))
-}
-function noteup(e) { shownote(e.detail.elt.id, e.detail.message, '⬆︎', 'green') }
-function notedown(e) { shownote(e.detail.elt.id, e.detail.message, '⬇︎', 'red') }
-function onopen(el,e) {
-  $(`#${el.id}-uws-indicator`).css('backgroundColor', 'limegreen');
-  htmx.on(el, 'htmx:wsAfterMessage', noteup);
-  htmx.on(el, 'htmx:wsAfterSend', notedown);
-  shownote(el.id, 'opened', '⬇︎', 'red')
-}
-function onerr(el,e) {
-  const type = e.detail?.event?.type || 'error';
-  const color = { error: 'orange', close: 'red' }[type] || 'grey';
-  $(`#${el.id}-uws-indicator`).css('backgroundColor', color);
-}
-function oncleanup(el) {
-  $(`#${el.id}-uws-indicator`).css('backgroundColor', 'grey');
-  htmx.off(el, 'htmx:wsAfterMessage', noteup);
-  htmx.off(el, 'htmx:wsAfterSend', notedown);
-  shownote(el.id, 'closed', '⬇︎', 'red')
-}
-
-if (window._uws_indicator_offs) window._uws_indicator_offs.forEach(f => f());
-window._uws_indicator_offs = [
-  user_ws.on('open', onopen),
-  user_ws.on('close', onerr),
-  user_ws.on('err', onerr),
-  user_ws.on('cleanup', oncleanup)
-];'''
-#| linkedto: f6a6c557
+# %% ../nbs/03_user_ws.ipynb #2b9190b0
+_user_ws_indicator_js = "const user_ws = window.user_ws;\n\nfunction truncS(s, l=120) { s = String(s); return s.length <= l ? s : s.substring(0, l) + '\\u2026'; }\nfunction shownote(id, msg, dir, color) {\n  $('#uws-note').empty()\n    .append($('<span>').css('color', color).text(dir))\n    .append(document.createTextNode(`${id}: `))\n    .append($('<samp>').text(truncS(msg)))\n}\nfunction noteup(e) { shownote(e.detail.elt.id, e.detail.message, '⬆︎', 'green') }\nfunction notedown(e) { shownote(e.detail.elt.id, e.detail.message, '⬇︎', 'red') }\nfunction onopen(el,e) {\n  $(`#${el.id}-uws-indicator`).css('backgroundColor', 'limegreen');\n  htmx.on(el, 'htmx:wsAfterMessage', noteup);\n  htmx.on(el, 'htmx:wsAfterSend', notedown);\n  shownote(el.id, 'opened', '⬇︎', 'red')\n}\nfunction onerr(el,e) {\n  const type = e.detail?.event?.type || 'error';\n  const color = { error: 'orange', close: 'red' }[type] || 'grey';\n  $(`#${el.id}-uws-indicator`).css('backgroundColor', color);\n}\nfunction oncleanup(el) {\n  $(`#${el.id}-uws-indicator`).css('backgroundColor', 'grey');\n  htmx.off(el, 'htmx:wsAfterMessage', noteup);\n  htmx.off(el, 'htmx:wsAfterSend', notedown);\n  shownote(el.id, 'closed', '⬇︎', 'red')\n}\n\nif (window._uws_indicator_offs) window._uws_indicator_offs.forEach(f => f());\nwindow._uws_indicator_offs = [\n  user_ws.on('open', onopen),\n  user_ws.on('close', onerr),\n  user_ws.on('err', onerr),\n  user_ws.on('cleanup', oncleanup)\n];"
+#| linkedto: c049acaa
 
 # %% ../nbs/03_user_ws.ipynb #adbf0ffb
-async def setup_uws_indicator():
+@delegates(setup_mod)
+async def setup_uws_indicator(**kwargs):
     await iife_a(r"document.getElementById('uws-box')?.remove()")
     await add_html_a(
         Div(hx_swap_oob='beforebegin:#dialog-container')(
             Div(id='uws-box', cls='flex flex-wrap w-full gap-1 lg:flex-nowrap')(
                 Div('uws indicator...', id='uws-note')
             )))
-    add_mod('user_ws_indicator', _user_ws_indicator_js)
-    await js_eval_a('''await import("/esm/user_ws_indicator")''')
+    await setup_mod('user_ws_indicator', _user_ws_indicator_js, **kwargs)
 
 # %% ../nbs/03_user_ws.ipynb #0022f4f4
-async def setup_user_ws(indicator=False):
+@delegates(setup_mod)
+async def setup_user_ws(indicator=False, **kwargs):
     "Inject the browser-side user_ws helper; use only in Solveit environment"
-    async with serve_app() as _:
-        add_mod('user_ws', _user_ws_js)
-        await js_eval_a('''await import("/esm/user_ws")''')
-        if indicator:await setup_uws_indicator()
+    await setup_mod('user_ws', _user_ws_js, **kwargs)
+    if indicator: await setup_uws_indicator(**kwargs)
 
-# %% ../nbs/03_user_ws.ipynb #1154399c
+# %% ../nbs/03_user_ws.ipynb #98972fcc
 async def noop_a(*args, **kwargs): pass
 
 async def create_uws_indicator(wid):
     return await add_html_a(Div(hx_swap_oob='beforebegin:#uws-note')(_indicator(wid)))
 
 async def cleanup_uws_indicator(wid):
-    return await js_eval_a(f'''setTimeout(() => {{ $("#{wid}-uws-indicator").remove() }}, 500); return true''')
+    return await js_eval_a(f'''return $("#{wid}-uws-indicator").remove().length > 0''')
 
 uws_ind = dict(create_ui=create_uws_indicator, cleanup_ui=cleanup_uws_indicator)
 
-# %% ../nbs/03_user_ws.ipynb #032ee110
+# %% ../nbs/03_user_ws.ipynb #e621f84c
+def user_ws_url(port, path, qs:dict=None, sch='wss'):
+    "Build a Solveit public websocket URL for the given port/path/query params: <sch>://<public domain for port>/<path>?<qs>"
+    return f"{sch}://{json.loads(os.environ['PUBLIC_DOMAINS'])[str(port)]}/{path.lstrip('/')}{'?' if qs else ''}{urlencode(qs or {})}"
+
+_JS='user_ws'
+
+def _wid(wid): return wid or _new_id('uws')
+
+async def _wait_open(wid, timeout=3000):
+    res = await event_get_a('uws:open?', wid=wid, timeout=timeout)
+    assert res.get('open'), f"{wid} did not open"
+
+# %% ../nbs/03_user_ws.ipynb #44a810ba
+def _url(url, wid, port):
+    u = urlparse(url)
+    qs = dict(parse_qsl(u.query, keep_blank_values=True))
+    if not u.netloc: u = urlparse(user_ws_url(port, u.path, qs, sch=u.scheme or 'wss'))
+    return urlunparse(u._replace(query=urlencode(dict(qs, wid=wid)))),u.path
+
+# %% ../nbs/03_user_ws.ipynb #2accb5ae
 class UserWS:
-    "Manage Solveit-safe HTMX websocket initiators and server send handles keyed by `wid`"
-    def __init__(self, app, srv, create_ui=noop_a, cleanup_ui=noop_a): store_attr(); self.sends,self.routes,self.paths = {},{},{}
+    """Manage Solveit-safe HTMX websocket initiators and server send handles keyed by `wid`.
+    
+    One dialog-local browser websocket initiator per registered route; not shared across concurrent viewers.
+    """
 
-    def url(self, path, qs=''):
-        "Return public websocket URL for `path`"
-        return f"wss://{json.loads(os.environ['PUBLIC_DOMAINS'])[str(self.srv.port)]}{path}{qs}"
+    def __init__(self, app, srv, create_ui=noop_a, cleanup_ui=noop_a): store_attr(); self.states,self.paths = {},{}
 
-    _js='user_ws'
-    async def create(self, wid, path, **kwargs):
-        "Create browser websocket initiator for `path`"
-        qs = f"{'&' if '?' in path else '?'}{urlencode(dict(wid=wid))}"
-        wsurl = path if path.startswith(('ws://', 'wss://')) else self.url(path, qs)
-        await add_html_a(Div(hx_swap_oob='afterend:#ws-div')(Div(ws_connect=wsurl, hx_ext='ws', id=wid, data_uws=True, **kwargs)))
+    async def _create(self, url, wid, **initkw):
+        await add_html_a(Div(hx_swap_oob='afterend:#ws-div')(Div(ws_connect=url, hx_ext='ws', id=wid, data_uws=True, **initkw)))
         await self.create_ui(wid)
 
     async def cleanup(self, wid):
         "Remove browser initiator element"
         try:
-            res = await js_eval_a(f'''return {self._js}.cleanup({json.dumps(wid)})''')
+            res = await js_eval_a(f'''return {_JS}.cleanup({json.dumps(wid)})''')
             assert res.get('result') in ('removed', 'not found')
         finally: await self.cleanup_ui(wid)
     async def send_client(self, wid, data):
         "Send browser to Python via JS helper"
-        await iife_a(f"{self._js}.send({json.dumps(wid)}, {json.dumps(data)})")
+        await iife_a(f"{_JS}.send({json.dumps(wid)}, {json.dumps(data)})")
     async def send(self, wid, o):
         "Send Python to browser via stored send callable"
-        assert wid in self.sends, f"{wid} is not connected"
-        return await self.sends[wid](o)
+        assert (state:=self.states.get(wid)) and state.send, f"{wid} is not connected"
+        return await state.send(o)
 
     def _conn(self, wid, conn):
-        "Return FastHTML connect hook storing server send callable"
         async def _conn(scope,ws,send):
-            self.sends[wid] = send
+            state = self.states[wid]
+            state.ws,state.send = ws,send
             if conn: await conn(scope,ws,send)
         return _conn
     def _disconn(self, wid, disconn):
-        "Return FastHTML disconnect hook clearing server send callable"
         async def _disconn(scope,ws):
-            self.sends.pop(wid, None)
+            if (state:=self.states.get(wid)) and state.ws is ws: state.ws,state.send = None,None
             if disconn: await disconn(scope,ws)
         return _disconn
 
-    def add(self, path, handler, wid='', conn=None, disconn=None, **kwargs
-    ) -> str: # `wid`
+    @delegates(FastHTML.ws)
+    def add(self, wid, handler, path, conn=None, disconn=None, **kwargs) -> str: # `wid`
         "Register websocket route once; optionally setup conn/disconn hooks"
-        wid = wid or _new_id('uws')
-        if wid in self.routes:
-            assert self.routes[wid] == path, f"{wid} already registered for {self.routes[wid]}, not {path}"
+        if wid in self.states:
+            assert self.states[wid].path == path, f"{wid} already registered for {self.states[wid].path}, not {path}"
             return wid
         if path in self.paths: raise AssertionError(f"{path} already registered for {self.paths[path]}, not {wid}")
         self.app.ws(path, conn=self._conn(wid, conn), disconn=self._disconn(wid, disconn), **kwargs)(handler)
-        self.routes[wid],self.paths[path] = path,wid
+        self.states[wid],self.paths[path] = AD(path=path, ws=None, send=None),wid
         return wid
-    async def wait_open(self, wid, timeout=3000):
-        res = await event_get_a('uws:open?', wid=wid, timeout=timeout)
-        assert res.get('open'), f"{wid} did not open"
+    
     @delegates(add, keep=True)
-    async def start(self, path, handler, wid='', initkw=None, **kwargs
-    )-> str: # `wid`
-        "Register route and create browser initiator"
+    async def start(self,
+        url, # Absolute `ws://`/`wss://` URL or route path; relative paths use this instance's public server URL
+        handler, # FastHTML websocket handler; receives the JSON fields sent by the browser, including `wid`
+        wid='', # Browser initiator id; generated when omitted; an existing initiator with this id is stopped first
+        path=None, # Route path; defaults to the URL path
+        initkw:dict=None, # Additional attributes for the browser websocket initiator element
+        **kwargs
+    )->str: # Connected websocket initiator id (`wid`)
+        "Register one websocket route, create its Solveit-safe browser initiator, and wait until browser and Python can both send."
         if wid: await self.stop(wid)
-        wid = self.add(path, handler, wid, **kwargs)
-        await self.create(wid, path, **(initkw or {}))
-        await self.wait_open(wid)
-        await wait_for_a(lambda: wid in self.sends)
+        else: wid = _wid(wid)
+        url,route_path = _url(url, wid, self.srv.port)
+        path = route_path if path is None else path
+        try:
+            self.add(wid, handler, path, **kwargs)
+            await self._create(url, wid, **(initkw or {}))
+            await _wait_open(wid)
+            await wait_for_a(lambda: self.states[wid].send is not None)
+        except BaseException:
+            await self.stop(wid)
+            raise
         return wid
 
     async def stop(self, wid):
         "Remove browser initiator and forget server send callable"
         try: await self.cleanup(wid)
-        finally: self.sends.pop(wid, None)
-
-# %% ../nbs/03_user_ws.ipynb #ba22ff86
-allow(setup_user_ws, {UserWS: ...})
+        finally:
+            if state := self.states.get(wid): state.ws,state.send = None,None
