@@ -7,19 +7,17 @@ Docs: https://civvic.github.io/pote/dutil.html.md"""
 # %% auto #0
 __all__ = ['setup_dialog', 'solveit_version', 'in_dialog', 'get_caller_globals', 'count_tokens', 'ctxusage', 'strip_token_usage',
            'strip_ctx_usage', 'set_var', 'find_var', 'get_tag', 'has_tag', 'find_tag', 'get_linked', 'link_msg',
-           'hydrate', 'wait_for', 'wait_for_a', 'next_dup', 'next_filename', 'gen_id', 'at_', 'setup_ns', 'add_style',
-           'info', 'add_info', 'get_tool_names', 'show_tool_names', 'mk_ns_toollist', 'add_tools_card']
+           'hydrate', 'wait_for', 'next_dup', 'next_filename', 'gen_id', 'at_', 'setup_ns', 'add_style', 'info',
+           'add_info', 'get_tool_names', 'show_tool_names', 'mk_ns_toollist', 'add_tools_card']
 
 # %% ../nbs/00_dutil.ipynb #1e28a183
-import asyncio, os, re, sys, inspect, uuid, time
+import asyncio, os, re, sys, inspect, uuid
 from collections import defaultdict
 from inspect import Parameter, currentframe
 from pathlib import Path
 from typing import Any, Mapping
 from IPython import get_ipython
 import tiktoken
-from anyio import sleep
-from anyio.from_thread import start_blocking_portal
 from fastcore.imports import in_ipython
 from fastcore.meta import delegates
 from fastcore.xtras import is_listy, fenced_blocks
@@ -66,7 +64,7 @@ async def ctxusage(fromid:str='', toid:str='', dname:str='', msgs=None):
     toid = toid or (await read_msg(0, dname=dname))['id']
     end = ids.index(toid)
     src = '\n'.join(f"{m['content']}\n{m.get('output') or ''}" for m in msgs[start:end] if not m['skipped'])
-    return int(count_tokens(src)*1.25)
+    return int(count_tokens(src)*1.30)
 
 # %% ../nbs/00_dutil.ipynb #087e1b95
 def _strip_tok(s):
@@ -89,7 +87,7 @@ async def strip_ctx_usage(dname=''):
     return f'{b} → {a} ({a/b:.1%})'
 
 # %% ../nbs/00_dutil.ipynb #e45e9175
-# old version from `dialoghelper`, not thread safe
+# old version from `dialoghelper`; not thread safe
 def _find_frame_dict(sentinel:str):
     "Find the globals dict containing sentinel, or calling frame's globals if no sentinel"
     frame = currentframe().f_back.f_back
@@ -186,22 +184,17 @@ async def hydrate():
             if k == 'linkedto' and v in ids: linked[v] = msg['id']
     return linked
 
-# %% ../nbs/00_dutil.ipynb #b9ae31c1
-def wait_for(pred, timeout=0.5, interval=0.05):
-    "Wait until `pred` is True or `timeout` is reached without blocking the kernel"
-    async def _wait():
-        start = time.time()
-        while time.time()-start < timeout and not pred(): await sleep(interval)
-        return pred()
-    with start_blocking_portal() as portal: return portal.call(_wait)
-
-# %% ../nbs/00_dutil.ipynb #66d58c76
-async def wait_for_a(pred, timeout=2, sleep=0.01):
-    "Async wait until `pred` is true or `timeout` is reached"
-    t = asyncio.get_event_loop().time()
-    while not await maybe_await(pred()):
-        if asyncio.get_event_loop().time()-t > timeout: raise TimeoutError()
-        await asyncio.sleep(sleep)
+# %% ../nbs/00_dutil.ipynb #eff2e4e4
+async def wait_for(pred, timeout=2, interval=.01):
+    "Wait until possibly-async `pred` is truthy, returning its value"
+    if timeout < 0: raise ValueError("timeout must be non-negative")
+    if interval <= 0: raise ValueError("interval must be positive")
+    end = asyncio.get_running_loop().time() + timeout
+    while True:
+        if res := await maybe_await(pred()): return res
+        remaining = end - asyncio.get_running_loop().time()
+        if remaining <= 0: raise TimeoutError(f"Condition was not met within {timeout}s")
+        await asyncio.sleep(min(interval, remaining))
 
 # %% ../nbs/00_dutil.ipynb #cc011438
 def next_dup(fp, marker='_dup'):

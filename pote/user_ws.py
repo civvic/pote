@@ -60,7 +60,7 @@ Docs: https://civvic.github.io/pote/user_ws.html.md"""
 __all__ = ['setup_user_ws', 'UserWS']
 
 # %% ../nbs/03_user_ws.ipynb #92031bb1
-import json, os
+import json
 from urllib.parse import parse_qsl, urlencode, urlparse, urlunparse
 from fastcore.foundation import store_attr, AttrDict as AD
 from fastcore.meta import delegates
@@ -69,7 +69,7 @@ from fasthtml.core import FastHTML
 from dialoghelper import iife_a, js_eval_a, add_html_a, event_get_a
 from .basic import id_gen
 from .dutil import wait_for_a
-from .server import setup_mod
+from .server import setup_mod, pub_domain
 
 # %% ../nbs/03_user_ws.ipynb #21bceb0c
 _new_id = id_gen()
@@ -115,9 +115,9 @@ async def cleanup_uws_indicator(wid):
 uws_ind = dict(create_ui=create_uws_indicator, cleanup_ui=cleanup_uws_indicator)
 
 # %% ../nbs/03_user_ws.ipynb #e621f84c
-def user_ws_url(port, path, qs:dict=None, sch='wss'):
+def user_ws_url(path, port:int, qs:dict=None, sch='wss'):
     "Build a Solveit public websocket URL for the given port/path/query params: <sch>://<public domain for port>/<path>?<qs>"
-    return f"{sch}://{json.loads(os.environ['PUBLIC_DOMAINS'])[str(port)]}/{path.lstrip('/')}{'?' if qs else ''}{urlencode(qs or {})}"
+    return f"{sch}://{pub_domain(port)}/{path.lstrip('/')}{'?' if qs else ''}{urlencode(qs or {})}"
 
 _JS='user_ws'
 
@@ -131,7 +131,7 @@ async def _wait_open(wid, timeout=3000):
 def _url(url, wid, port):
     u = urlparse(url)
     qs = dict(parse_qsl(u.query, keep_blank_values=True))
-    if not u.netloc: u = urlparse(user_ws_url(port, u.path, qs, sch=u.scheme or 'wss'))
+    if not u.netloc: u = urlparse(user_ws_url(u.path, port, qs, sch=u.scheme or 'wss'))
     return urlunparse(u._replace(query=urlencode(dict(qs, wid=wid)))),u.path
 
 # %% ../nbs/03_user_ws.ipynb #2accb5ae
