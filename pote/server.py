@@ -10,7 +10,7 @@ from pote.server import ensure_server_a, serve_app, setup_mod, add_js_msg
 - `async with serve_app(...)` is for a scoped server that is stopped automatically, particularly in tests.
 - `find_server`, `is_serving_a`, and `stop_server_a` inspect and clean up existing server state.
 - `free_port(public=True)` returns first available public port.
-- `p(path)` previews a route in an iframe on a public port; it is None for private ports.
+- `p(path)` previews a route in an iframe on a public port; `p` is `None` for private ports, so they cannot be previewed.
 - `setup_mod(..., versioned=True)` supports iterative browser ES-module work.
 - `get_js`, `add_js_msg`, and `setup_mod` without `src` extract JavaScript from a `%%js`/`%%javascript` message.
 
@@ -52,7 +52,8 @@ p('/hello')
 or:
 
 ```python
-P(hx_get='/hello', hx_trigger='load once')
+url = '/hello' if srv.port == 8000 else f'https://{pub_domain(srv.port)}/hello'
+P(hx_get=url, hx_trigger='load once')
 ```
 
 Stop server:
@@ -133,7 +134,7 @@ Register and import JavaScript in the active Solveit browser with:
 
 ```python
 src = 'export const answer = 42'
-nm,res = await setup_mod('editor', src, versioned=True)
+url,res = await setup_mod('editor', src, versioned=True)
 ```
 
 With `versioned=True`, repeated calls register successive names such as `editor_1` and `editor_2`, and import distinct URLs such as `/esm/editor?v=1`. Use this during iterative development to bypass the browser’s ES-module cache.
@@ -146,9 +147,7 @@ An unversioned name provides a stable URL. Replacing its registered source chang
 
 If given, `dname` is URL-encoded and forwarded as the `dlg_name` query parameter during the browser import. It does not affect module-registry lookup; browser-side code can use it only if it reads that parameter.
 
-`setup_mod` and `load_mod` import through a given or discovered server in the active Solveit browser. The resolved server must listen on a Solveit public port: port `8000` uses a relative import URL, while another public port uses its assigned public domain. A private port raises `RuntimeError` before browser evaluation.
-
-If no live server is found and the requested public port is free, a temporary server is created for the import and stopped afterward. If the port is occupied by a non-discoverable process, setup fails rather than replacing it.
+`setup_mod` and `load_mod` create a temporary public server for the browser import, then stop it once the import completes. Port 8000 produces a relative import URL; another selected public port produces a full URL using its assigned public domain. The module registry and browser module cache persist after that temporary server stops.
 
 JavaScript can also come from a dialog message whose first line is `%%js` or `%%javascript`:
 
@@ -168,17 +167,18 @@ __all__ = ['wrap_endp', 'pub_ports', 'free_port', 'free_public_domain', 'pub_dom
            'setup_uvi_logging', 'serve_app', 'get_js', 'add_js_msg', 'load_mod', 'setup_mod']
 
 # %% ../nbs/02_server.ipynb #92031bb1
-import asyncio, inspect, json, keyword, logging, os, subprocess, re
+import inspect, json, keyword, logging, os, subprocess, re
 from contextlib import asynccontextmanager
 from collections.abc import Callable, AsyncIterator
 from datetime import datetime
 from functools import partial
+from unittest.mock import patch as mock_patch
 from urllib.parse import quote
 from starlette.middleware import Middleware
 from starlette.middleware.cors import CORSMiddleware
 from starlette.responses import Response
 from starlette.routing import Route
-from fastcore.basics import first
+from fastcore.basics import first, ifnone
 from fastcore.aio import maybe_await
 from fastcore.meta import delegates
 from fastcore.net import is_port_free
@@ -361,13 +361,13 @@ __mods__ = {}
 def reg_mod(
     nm:str, # Kernel-global registry key
     src:str, # JavaScript module source served for this key
-    v:int|None=None, # Version suffix; when given, the module is served under `<nm>_<v>`
+    v:int=0, # Numeric version; when > 0, the module is served under `<nm>?v=<v>`
 ) -> None:
     "Register or replace JavaScript source; entries persist in this kernel across app and server lifetimes."
     __mods__[_check_mod_nm(nm)+(f"_{v}" if v>0 else '')] = src
 def _get_mod(
     nm:str, # Base module name from the request route
-    v:int=0, # Requested version; resolves `<nm>_<v>` before the base name
+    v:int=0, # Requested version
     debugger:bool=False, # Prefix existing module source with `debugger;`
 ):
     "Return registered JavaScript as an HTTP response, or a diagnostic module when missing."
@@ -474,58 +474,6 @@ def setup_uvi_logging(
             lg.setLevel(level)
     return cleanup
 
-# %% ../nbs/02_server.ipynb #50b6c46a
-@asynccontextmanager
-async def serve_app(
-    app:FastHTML|None=None, # FastHTML app to serve; if omitted, create one with `app_kw`
-    port:int|None=None, # Port to serve on; `None` chooses a free non-public port
-    srv:JupyUvi|None=None, # Explicit live server; reused and never owned by this context
-    reuse:bool=True, # Reuse a live server discovered on `port`; otherwise raise if one exists
-    after_start:Callable[[JupyUvi],object]|None=None, # Sync or async callback after setup; failure triggers owned-server cleanup
-    before_stop:Callable[[JupyUvi],object]|None=None, # Sync or async callback during cleanup, before owned-server shutdown
-    restore_routes:bool=True, # Restore the initial route list only for a server created by this context
-    timeout:float=5, # Seconds to wait for an owned server's port to become free
-    mods:dict[str,str]|None=None, # Sources registered in the kernel-global ESM registry
-    app_kw:dict|None=None, # Keywords used only when creating the default FastHTML app
-    public=False, # Set True to enforce a public port if `srv` is not given
-    **jupyuvi_kw, # Additional `JupyUviAsync` options used only when creating a server
-) -> AsyncIterator[JupyUvi]:
-    "Yield a live server in a temporary notebook namespace scope; stop and optionally restore routes only when this context created it."
-    from unittest.mock import patch as mock_patch
-    ns = get_ipython().user_ns
-    with mock_patch.dict(ns, {}):
-        srv,own = await _ensure_server_a(srv=srv, port=port, app=app, app_kw=app_kw, reuse=reuse, public=public, **jupyuvi_kw)
-        routes = list(srv.app.routes) if own and restore_routes and hasattr(srv.app, 'routes') else None
-        primary = None
-        try:
-            setup_loader(srv.app, mods)
-            if after_start: await maybe_await(after_start(srv))
-            yield srv
-        except BaseException as e:
-            primary = e
-            raise
-        finally:
-            errs = []
-            try:
-                if own and before_stop: await maybe_await(before_stop(srv))
-            except BaseException as e: errs.append(e)
-            try:
-                if routes is not None: srv.app.routes[:] = routes
-            except BaseException as e: errs.append(e)
-            try:
-                if own:
-                    srv.server.should_exit = True
-                    deadline = (loop := asyncio.get_running_loop()).time() + timeout
-                    while not is_port_free(srv.port, srv.host):
-                        if loop.time() > deadline: raise TimeoutError(f"Port {srv.host}:{srv.port} still in use after {timeout}s")
-                        await asyncio.sleep(0.1)
-            except BaseException as e: errs.append(e)
-            if errs:
-                if primary is None:
-                    if len(errs) == 1: raise errs[0]
-                    raise BaseExceptionGroup("serve_app cleanup failures", errs)
-                for e in errs: primary.add_note(f"serve_app cleanup failed: {type(e).__name__}: {e}")
-
 # %% ../nbs/02_server.ipynb #2f03e0c6
 @asynccontextmanager
 async def serve_app(
@@ -586,30 +534,16 @@ async def add_js_msg(
         return await link_msg(_py_assign(nm, src), msg_type='code', **kwargs)
     raise ValueError(f"Message #{id or (await read_msg()).id} does not contain Javascript source")
 
-# %% ../nbs/02_server.ipynb #673eba95
-async def load_mod(
-    nm:str, # Route-safe module name previously registered with `reg_mod`
-    v:int|None=None, # Numeric version selecting registered `<nm>_<v>` before falling back to `<nm>`
-    dname:str='', # Dialog owning the module; will be appended as query param if present
-) -> object:
-    "Import `/esm/<nm>` in the active Solveit browser; return URL and module result. Need at least one public port free."
-    _check_mod_nm(nm)
-    async with serve_app(public=True) as srv:
-        q = (*filter(None, (f"v={v}" if v is not None else '', f"dlg_name={quote(dname.lstrip('/'), safe='')}" if dname else '')),)  
-        base = '' if srv.port == 8000 else f"https://{pub_domain(srv.port)}"
-        url = f'{base}/esm/{nm}' + ('?' if q else '') + '&'.join(q)
-        return url, await js_eval_a(f"return await import({json.dumps(url)})")
-
 # %% ../nbs/02_server.ipynb #648e4add
 async def load_mod(
     nm:str, # Route-safe module name previously registered with `reg_mod`
-    v:int|None=None, # Numeric version selecting registered `<nm>_<v>` before falling back to `<nm>`
+    v:int=0, # Numeric version; when > 0, will load `/esm/<nm>?v=<v>`
     dname:str='', # Dialog owning the module; will be appended as query param if present
 ) -> object:
     "Import a registered ES module in the active Solveit browser and return the url and its exports (as JSON)."
     _check_mod_nm(nm)
     async with serve_app(public=True) as srv:
-        q = (*filter(None, (f"v={v}" if v is not None else '', f"dlg_name={quote(dname.lstrip('/'), safe='')}" if dname else '')),)
+        q = (*filter(None, (f"v={v}" if v > 0 else '', f"dlg_name={quote(dname.lstrip('/'), safe='')}" if dname else '')),)
         base = '' if srv.port == 8000 else f"https://{pub_domain(srv.port)}"
         url = f'{base}/esm/{nm}' + ('?' if q else '') + '&'.join(q)
         res = await js_eval_a(f'''try {{ return await import({json.dumps(url)}) }} catch (e) {{ return {{__load_mod_error__: `${{e.name}}: ${{e.message}}`}} }}''')
@@ -617,19 +551,16 @@ async def load_mod(
     return url, res
 
 # %% ../nbs/02_server.ipynb #8a4f6aea
-@delegates(serve_app)
 async def setup_mod(
     nm:str, # Stable base ESM name
     src:str|None=None, # JavaScript source; defaults to the preceding JS message
-    versioned:bool=False, # Use a kernel-local counter for `<nm>_<version>` and `?v=<version>` to bypass browser cache
+    versioned:bool=False, # Use a kernel-local counter for `?v=<version>` to bypass browser cache
     dname:str='', # Dialog owning the module; will be appended as query param if present
-    **kwargs
 ) -> tuple[str,object]:
-    "Register stable or versioned JavaScript, import it, and return `(registered_name, browser_result)`."
+    "Register stable or versioned JavaScript, import it, and return `(url, browser_result)`."
     _check_mod_nm(nm)
     if src is None: src = await get_js()
     if src is None: raise ValueError(f"Message #{(await read_msg()).id} does not contain Javascript source")
-    v = kntr(nm) if versioned else None
-    nmv = f'{nm}_{v}' if v is not None else nm
-    reg_mod(nmv, src)
-    return nmv, await load_mod(nm, v, dname=dname, **kwargs)
+    v = kntr(nm) if versioned else 0
+    reg_mod(nm, src, v)
+    return await load_mod(nm, v, dname=dname)
