@@ -68,7 +68,7 @@ from fasthtml.components import Div, Span
 from fasthtml.core import FastHTML
 from dialoghelper import iife_a, js_eval_a, add_html_a, event_get_a
 from .basic import id_gen
-from .dutil import wait_for_a
+from .dutil import wait_for
 from .server import setup_mod, pub_domain
 
 # %% ../nbs/03_user_ws.ipynb #21bceb0c
@@ -86,22 +86,20 @@ _user_ws_indicator_js = "const user_ws = window.user_ws;\n\nfunction truncS(s, l
 #| linkedto: c049acaa
 
 # %% ../nbs/03_user_ws.ipynb #adbf0ffb
-@delegates(setup_mod)
-async def setup_uws_indicator(**kwargs):
+async def setup_uws_indicator(dname:str=''):
     await iife_a(r"document.getElementById('uws-box')?.remove()")
     await add_html_a(
         Div(hx_swap_oob='beforebegin:#dialog-container')(
             Div(id='uws-box', cls='flex flex-wrap w-full gap-1 lg:flex-nowrap')(
                 Div('uws indicator...', id='uws-note')
             )))
-    await setup_mod('user_ws_indicator', _user_ws_indicator_js, **kwargs)
+    await setup_mod('user_ws_indicator', _user_ws_indicator_js, dname=dname)
 
 # %% ../nbs/03_user_ws.ipynb #0022f4f4
-@delegates(setup_mod)
-async def setup_user_ws(indicator=False, **kwargs):
+async def setup_user_ws(indicator=False, dname:str=''):
     "Inject the browser-side user_ws helper; use only in Solveit environment"
-    await setup_mod('user_ws', _user_ws_js, **kwargs)
-    if indicator: await setup_uws_indicator(**kwargs)
+    await setup_mod('user_ws', _user_ws_js, dname=dname)
+    if indicator: await setup_uws_indicator(dname=dname)
 
 # %% ../nbs/03_user_ws.ipynb #98972fcc
 async def noop_a(*args, **kwargs): pass
@@ -202,7 +200,7 @@ class UserWS:
             self.add(wid, handler, path, **kwargs)
             await self._create(url, wid, **(initkw or {}))
             await _wait_open(wid)
-            await wait_for_a(lambda: self.states[wid].send is not None)
+            await wait_for(lambda: self.states[wid].send is not None)
         except BaseException:
             await self.stop(wid)
             raise
