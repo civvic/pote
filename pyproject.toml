@@ -12,7 +12,7 @@ license = {text = 'Apache-2.0'}
 authors = [{name = 'Spikey', email = 'civvic@gmail.com'}]
 keywords = ['python', 'nbdev', 'jupyter', 'notebook', 'javascript']
 classifiers = ['Natural Language :: English', 'Intended Audience :: Developers', 'Development Status :: 3 - Alpha', 'Programming Language :: Python :: 3', 'Programming Language :: Python :: 3 :: Only']
-dependencies = ['fastcore>=1.12.34,<2', 'rich>=14.3.3']
+dependencies = ['fastcore>=2.1.16', 'rich>=14.3.3']
 
 [project.urls]
 Repository = 'https://github.com/civvic/pote'
@@ -22,11 +22,11 @@ Documentation = 'https://civvic.github.io/pote'
 pote = 'pote._modidx:d'
 
 [project.optional-dependencies]
-loguru = ['loguru>=0.7.0']
-dialoghelper = ['dialoghelper>=0.2.28']
-pyflakes = ['pyflakes>=3.4.0']
-ipywidgets = ['ipywidgets>=8.1.5', 'jupyter_ui_poll>=1.0.0']
-dev = ['notebook>=7.5.5', 'jupyterlab>=4.5.6', 'nbclassic>=1.3.3', 'nbdev>=3.0.12', 'reorder-python-imports>=3.16.0', "pysym2md", "llms-txt"]
+loguru = ['loguru']
+dialoghelper = ['dialoghelper']
+pyflakes = ['pyflakes']
+ipywidgets = ['ipywidgets', 'jupyter_ui_poll']
+dev = ['notebook', 'jupyterlab', 'nbclassic', 'nbdev', 'reorder-python-imports', "pysym2md", "llms-txt"]
 all = ['pote[loguru,dialoghelper,pyflakes,ipywidgets,dev]']
 
 [tool.setuptools.dynamic]
